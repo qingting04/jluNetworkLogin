@@ -29,7 +29,7 @@ define Build/Compile
 		-I$(STAGING_DIR)/usr/include \
 		-o $(PKG_BUILD_DIR)/drcomd \
 		$(PKG_BUILD_DIR)/drcomd.c \
-		$(TARGET_LDFLAGS) -lubus -lubox -luci
+		$(TARGET_LDFLAGS) -L$(STAGING_DIR)/usr/lib -lubus -lubox -luci
 endef
 
 define Package/drcomd/install

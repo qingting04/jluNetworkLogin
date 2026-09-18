@@ -11,6 +11,7 @@
 |------|------|
 | `drcomd/` | C 语言守护进程（C11，单文件），实现 DrCOM 协议认证循环 |
 | `luci-app-jludrcom/` | LuCI 管理页面（纯 JS，无翻译包依赖），提供配置、状态查看与一键操作 |
+| `.github/workflows/build.yml` | GitHub Actions 云编译脚本，fork 后自动产出可安装的 `.apk` |
 
 ## 特性
 
@@ -19,6 +20,43 @@
 - **ubus RPC 接口**：暴露 `status` / `reconnect` / `reload` 三个方法，可被脚本或其它服务调用
 - **系统日志**：经 ulog 写入 logd，`logread` 即可查看
 - **中文界面**：LuCI 页面内置中文，无需额外语言包
+
+## 快速开始（云编译，无需本地工具链）
+
+不用在本地搭建 OpenWrt 编译环境，fork 后由 GitHub 自动编译出可安装的 `.apk`。
+
+1. **Fork 本仓库**。
+
+2. **（可选）改编译目标**：编辑 `.github/workflows/build.yml` 顶部的 `env`，改成你路由器的型号：
+
+   | 变量 | 默认值 | 说明 |
+   |------|--------|------|
+   | `SDK_VERSION` | `25.12.2` | ImmortalWrt 版本 |
+   | `TARGET` | `ramips` | 目标平台 |
+   | `SUBTARGET` | `mt7621` | 子目标（MT7621 芯片） |
+   | `GCC` | `14.3.0` | gcc 版本 |
+
+   对应关系可在 <https://downloads.immortalwrt.org/releases/> 查询确认。
+
+3. **触发编译**：push 到 `main` 分支，或到 Actions 页面手动 Run workflow。
+
+4. **下载产物**：编译完成后，进入对应 run 页面下载 `jluDrcom` artifact，解压得到
+   `drcomd_*.apk` 和 `luci-app-jludrcom_*.apk`。
+
+5. **安装**（将两个 `.apk` 上传到路由器后）：
+
+   ```sh
+   apk add --allow-untrusted /tmp/drcomd_*.apk
+   apk add --allow-untrusted /tmp/luci-app-jludrcom_*.apk
+   /etc/init.d/drcomd enable
+   /etc/init.d/drcomd start
+   ```
+
+   LuCI 入口：**系统 → 服务 → 吉林大学 DrCOM**。
+
+> **固件版本说明**：默认面向 ImmortalWrt 25.12（使用 `apk` 包管理）。若你的固件是旧版
+> `opkg` 系统，把 `SDK_VERSION` 改成对应的大版本即可产出 `.ipk`，安装时改用
+> `opkg install drcomd_*.ipk`。
 
 ## LuCI 页面功能
 
@@ -96,41 +134,6 @@ logread -e drcomd
 logread | grep -i drcom
 ```
 
-## 编译与安装
-
-> **注意**：OpenWrt / ImmortalWrt 不同大版本之间 ABI 包名（libubus / libubox / libuci 的版本化依赖）可能不同，
-> **必须使用目标路由器对应版本与 target 的 SDK 或源码树编译**，不可跨版本安装旧 ipk。
-
-### 放入源码树
-
-```sh
-cp -r drcomd            openwrt/package/drcomd/
-cp -r luci-app-jludrcom openwrt/package/luci-app-jludrcom/
-```
-
-### 编译
-
-```sh
-make menuconfig
-# LuCI  → Applications  → luci-app-jludrcom
-# Network → drcomd
-
-make package/drcomd/compile -j$(nproc) V=s
-make package/luci-app-jludrcom/compile -j$(nproc) V=s
-```
-
-### 安装
-
-```sh
-opkg install drcomd_*.ipk
-opkg install luci-app-jludrcom_*.ipk
-
-/etc/init.d/drcomd enable
-/etc/init.d/drcomd start
-```
-
-LuCI 入口：**系统 → 服务 → 吉林大学 DrCOM**
-
 ## 协议流程
 
 ```
@@ -142,6 +145,21 @@ challenge  →  login  →  keepalive (stage 0 → 1 → 2 → 循环)
 - 向服务器发送 UDP challenge 包（`0x01`），请求 4 字节 salt
 - 收到 salt 后构造 login 包（含 MD5 校验、口令混淆、MAC 绑定、主机名等字段）
 - 登录成功后进入三段式 keepalive 保活，约每 20 秒一轮，断线自动重试
+
+## 本地源码树编译（可选）
+
+若你习惯本地编译，也可把两个目录放进 OpenWrt / ImmortalWrt 源码树：
+
+```sh
+cp -r drcomd            openwrt/package/drcomd/
+cp -r luci-app-jludrcom openwrt/package/luci-app-jludrcom/
+make menuconfig          # LuCI → Applications → luci-app-jludrcom；Network → drcomd
+make package/drcomd/compile -j$(nproc) V=s
+make package/luci-app-jludrcom/compile -j$(nproc) V=s
+```
+
+> **注意**：OpenWrt / ImmortalWrt 不同大版本之间 ABI 包名（libubus / libubox / libuci 的版本化依赖）
+> 可能不同，**必须使用目标路由器对应版本与 target 的 SDK 或源码树编译**，不可跨版本安装旧 ipk。
 
 ## 常见问题
 
@@ -157,14 +175,15 @@ challenge  →  login  →  keepalive (stage 0 → 1 → 2 → 循环)
 
 ```
 jluDrcom/
+├── .github/workflows/build.yml        # GitHub Actions 云编译
 ├── drcomd/
-│   ├── Makefile                # OpenWrt 包定义
-│   ├── src/drcomd.c            # 守护进程（单文件 C 实现）
+│   ├── Makefile                       # OpenWrt 包定义
+│   ├── src/drcomd.c                   # 守护进程（单文件 C 实现）
 │   └── files/
-│       ├── drcomd.init         # procd init 脚本
-│       └── drcom.config        # 默认 UCI 配置
+│       ├── drcomd.init                # procd init 脚本
+│       └── drcom.config               # 默认 UCI 配置
 └── luci-app-jludrcom/
-    ├── Makefile                # LuCI 包定义（luci.mk）
+    ├── Makefile                       # LuCI 包定义（luci.mk）
     └── root/
         ├── usr/share/luci/menu.d/luci-app-jludrcom.json
         ├── usr/share/rpcd/acl.d/luci-app-jludrcom.json

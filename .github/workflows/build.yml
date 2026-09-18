@@ -1,0 +1,50 @@
+name: build
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  SDK_VERSION: "25.12.2"
+  TARGET: "ramips"
+  SUBTARGET: "mt7621"
+  GCC: "14.3.0"
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install zstd
+        run: sudo apt-get update && sudo apt-get install -y zstd
+
+      - name: Download ImmortalWrt SDK
+        run: |
+          wget -q -O sdk.tar.zst \
+            "https://downloads.immortalwrt.org/releases/${SDK_VERSION}/targets/${TARGET}/${SUBTARGET}/immortalwrt-sdk-${SDK_VERSION}-${TARGET}-${SUBTARGET}_gcc-${GCC}_musl.Linux-x86_64.tar.zst"
+          tar --zstd -xf sdk.tar.zst
+
+      - name: Copy packages into SDK
+        run: |
+          cp -r drcomd immortalwrt-sdk-*/package/
+          cp -r luci-app-jludrcom immortalwrt-sdk-*/package/
+
+      - name: Build
+        run: |
+          cd immortalwrt-sdk-*/
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a -f
+          make defconfig
+          make package/drcomd/compile V=s -j$(nproc)
+          make package/luci-app-jludrcom/compile V=s -j$(nproc)
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jluDrcom
+          path: |
+            immortalwrt-sdk-*/bin/packages/**/drcomd*.apk
+            immortalwrt-sdk-*/bin/packages/**/luci-app-jludrcom*.apk
