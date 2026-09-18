@@ -1,6 +1,6 @@
 {
   "admin/services/jluNetworkLogin": {
-    "title": "jluNetworkLogin",
+    "title": "JLU Network Login",
     "order": 60,
     "action": {
       "type": "view",

@@ -38,14 +38,14 @@ function renderStatusBox(initial) {
 	var lastErr = (initial && initial.last_error) ? initial.last_error : '';
 
 	return E('div', { 'class': 'cbi-section' }, [
-		E('h3', {}, [ _('状态') ]),
+		E('h3', {}, [ _('Status') ]),
 		E('div', { 'class': 'table', 'id': 'drcom-status-table' }, [
 			E('div', { 'class': 'tr' }, [
-				E('div', { 'class': 'td left' }, [ _('连接状态') ]),
+				E('div', { 'class': 'td left' }, [ _('Connection state') ]),
 				E('div', { 'class': 'td left', 'id': 'drcom-status-state' }, [ state ])
 			]),
 			E('div', { 'class': 'tr' }, [
-				E('div', { 'class': 'td left' }, [ _('最近错误') ]),
+				E('div', { 'class': 'td left' }, [ _('Last error') ]),
 				E('div', { 'class': 'td left', 'id': 'drcom-status-err' }, [ lastErr || '-' ])
 			])
 		])
@@ -60,18 +60,18 @@ function updateStatusBox(res) {
 	};
 
 	var stateMap = {
-		'idle': _('空闲'),
-		'online': _('已在线'),
-		'challenge': _('获取挑战中'),
-		'login': _('登录中'),
-		'keepalive': _('保持在线')
+		'idle': _('Idle'),
+		'online': _('Online'),
+		'challenge': _('Fetching challenge'),
+		'login': _('Logging in'),
+		'keepalive': _('Keeping alive')
 	};
 	var st = (res && res.state) ? res.state : '-';
 	set('drcom-status-state', stateMap[st] || st);
 
 	var le = (res && res.last_error) ? res.last_error : '-';
 	if (le === 'manual reconnect')
-		le = _('手动重连');
+		le = _('Manual reconnect');
 	set('drcom-status-err', le);
 }
 
@@ -84,19 +84,19 @@ return view.extend({
 			var gw = uci.get('jlu-network-login', 'main', 'gateway');
 
 			if (!ifname)
-				throw new Error(_('必须选择接口'));
+				throw new Error(_('An interface must be selected'));
 			if (!ip)
-				throw new Error(_('必须填写 IP 地址'));
+				throw new Error(_('The IP address is required'));
 			if (!mac)
-				throw new Error(_('必须填写 MAC 地址'));
+				throw new Error(_('The MAC address is required'));
 			if (!gw)
-				throw new Error(_('必须填写网关'));
+				throw new Error(_('The gateway is required'));
 
 			mac = String(mac).toLowerCase();
 
 			return Promise.all([ uci.load('network'), uci.load('dhcp') ]).then(function() {
 				if (!uci.get('network', ifname))
-					throw new Error(_('未找到网络接口“%s”').format(ifname));
+					throw new Error(_('Network interface "%s" not found').format(ifname));
 
 				var dnsmasq = uci.sections('dhcp', 'dnsmasq');
 				var dnsmasqSid = (dnsmasq && dnsmasq.length) ? dnsmasq[0]['.name'] : null;
@@ -137,31 +137,31 @@ return view.extend({
 		}).then(function() {
 			return Promise.all([
 				callNetworkReload().catch(function(e) {
-					ui.addNotification(null, E('p', [ _('网络重载失败：%s').format(String(e)) ]), 'warning');
+					ui.addNotification(null, E('p', [ _('Failed to reload the network: %s').format(String(e)) ]), 'warning');
 				}),
 				callInitAction('dnsmasq', 'restart').catch(function(e) {
-					ui.addNotification(null, E('p', [ _('重启 dnsmasq 失败：%s').format(String(e)) ]), 'warning');
+					ui.addNotification(null, E('p', [ _('Failed to restart dnsmasq: %s').format(String(e)) ]), 'warning');
 				})
 			]);
 		}).then(function() {
-			ui.addNotification(null, E('p', [ _('一键配置已应用（静态 IP/MAC/网关/DNS + 关闭 DNS 重绑定保护）。') ]), 'info');
+			ui.addNotification(null, E('p', [ _('One-click setup applied (static IP, MAC address, gateway and DNS are set, DNS rebind protection is disabled).') ]), 'info');
 		}).catch(function(e) {
 			ui.addNotification(null, E('p', [ String((e && e.message) ? e.message : e) ]), 'danger');
 		});
 	},
 
 	handleRestore: function(m, ev) {
-		ui.showModal(_('确认恢复设置？'), [
-			E('p', [ _('这将恢复上次“一键配置”前备份的接口设置，并重新启用 DNS 重绑定保护。') ]),
+		ui.showModal(_('Restore the previous settings?'), [
+			E('p', [ _('This restores the interface settings that were backed up before the last one-click setup and re-enables DNS rebind protection.') ]),
 			E('div', { 'class': 'right' }, [
 				E('button', {
 					'class': 'btn',
 					'click': ui.createHandlerFn(this, ui.hideModal)
-				}, [ _('取消') ]), ' ',
+				}, [ _('Cancel') ]), ' ',
 				E('button', {
 					'class': 'btn cbi-button-action important',
 					'click': ui.createHandlerFn(this, 'handleRestoreConfirm')
-				}, [ _('继续') ])
+				}, [ _('Continue') ])
 			])
 		]);
 	},
@@ -172,9 +172,9 @@ return view.extend({
 		return Promise.all([ uci.load('jlu-network-login'), uci.load('network'), uci.load('dhcp') ]).then(function() {
 			var ifname = uci.get('jlu-network-login', 'main', 'backup_ifname');
 			if (!ifname)
-				throw new Error(_('未找到备份，请先执行“一键配置”。'));
+				throw new Error(_('No backup found - run the one-click setup first.'));
 			if (!uci.get('network', ifname))
-				throw new Error(_('未找到网络接口“%s”').format(ifname));
+				throw new Error(_('Network interface "%s" not found').format(ifname));
 
 			var setOrUnset = function(conf, sid, opt, val) {
 				if (Array.isArray(val)) {
@@ -205,14 +205,14 @@ return view.extend({
 		}).then(function() {
 			return Promise.all([
 				callNetworkReload().catch(function(e) {
-					ui.addNotification(null, E('p', [ _('网络重载失败：%s').format(String(e)) ]), 'warning');
+					ui.addNotification(null, E('p', [ _('Failed to reload the network: %s').format(String(e)) ]), 'warning');
 				}),
 				callInitAction('dnsmasq', 'restart').catch(function(e) {
-					ui.addNotification(null, E('p', [ _('重启 dnsmasq 失败：%s').format(String(e)) ]), 'warning');
+					ui.addNotification(null, E('p', [ _('Failed to restart dnsmasq: %s').format(String(e)) ]), 'warning');
 				})
 			]);
 		}).then(function() {
-			ui.addNotification(null, E('p', [ _('恢复已应用。') ]), 'info');
+			ui.addNotification(null, E('p', [ _('Restore applied.') ]), 'info');
 		}).catch(function(e) {
 			ui.addNotification(null, E('p', [ String((e && e.message) ? e.message : e) ]), 'danger');
 		});
@@ -228,38 +228,38 @@ return view.extend({
 	render: function(data) {
 		var initialStatus = data[1] || {};
 
-		var m = new form.Map('jlu-network-login', _('吉林大学 DrCOM'), _('吉林大学校园网 DrCOM 客户端守护进程。'));
+		var m = new form.Map('jlu-network-login', _('JLU Network Login'), _('DrCOM client daemon for the JLU campus network.'));
 
-		var s = m.section(form.NamedSection, 'main', 'main', _('设置'));
+		var s = m.section(form.NamedSection, 'main', 'main', _('Settings'));
 		s.addremove = false;
 
 		var o;
-		o = s.option(form.Flag, 'enabled', _('启用'));
+		o = s.option(form.Flag, 'enabled', _('Enable'));
 		o.default = o.disabled;
 
-		o = s.option(form.Value, 'username', _('账号'));
+		o = s.option(form.Value, 'username', _('Username'));
 		o.datatype = 'string';
 
-		o = s.option(form.Value, 'password', _('密码'));
+		o = s.option(form.Value, 'password', _('Password'));
 		o.password = true;
 		o.datatype = 'string';
 
-		o = s.option(widgets.NetworkSelect, 'interface', _('接口'));
+		o = s.option(widgets.NetworkSelect, 'interface', _('Interface'));
 		o.nocreate = true;
 		o.default = 'wan';
 		o.rmempty = false;
 
-		o = s.option(form.Value, 'ip', _('IP 地址'));
+		o = s.option(form.Value, 'ip', _('IP address'));
 		o.datatype = 'ip4addr';
 		o.placeholder = '10.100.61.100';
 		o.rmempty = false;
 
-		o = s.option(form.Value, 'gateway', _('网关'));
+		o = s.option(form.Value, 'gateway', _('Gateway'));
 		o.datatype = 'ip4addr';
 		o.placeholder = '10.100.61.1';
 		o.rmempty = false;
 
-		o = s.option(form.Value, 'mac', _('MAC 地址'));
+		o = s.option(form.Value, 'mac', _('MAC address'));
 		o.datatype = 'macaddr';
 		o.placeholder = 'aa:bb:cc:dd:ee:ff';
 		o.rmempty = false;
@@ -268,7 +268,7 @@ return view.extend({
 			var statusBox = renderStatusBox(initialStatus);
 
 			var actionsBox = E('div', { 'class': 'cbi-section' }, [
-				E('h3', {}, [ _('操作') ]),
+				E('h3', {}, [ _('Actions') ]),
 				E('div', { 'class': 'cbi-section-actions' }, [
 					E('button', {
 						'class': 'cbi-button cbi-button-positive',
@@ -279,12 +279,12 @@ return view.extend({
 								btn.disabled = false;
 							});
 						})
-					}, [ _('一键配置') ]),
+					}, [ _('One-click setup') ]),
 					' ',
 					E('button', {
 						'class': 'cbi-button cbi-button-negative',
 						'click': ui.createHandlerFn(this, function(ev) { return this.handleRestore(m, ev); })
-					}, [ _('一键恢复') ]),
+					}, [ _('One-click restore') ]),
 					' ',
 					E('button', {
 						'class': 'cbi-button cbi-button-action',
@@ -292,14 +292,14 @@ return view.extend({
 							var btn = ev.currentTarget;
 							btn.disabled = true;
 							return callReconnect().catch(function(e) {
-								ui.addNotification(null, E('p', [ _('重连失败：%s').format(String(e)) ]), 'warning');
+								ui.addNotification(null, E('p', [ _('Reconnect failed: %s').format(String(e)) ]), 'warning');
 							}).then(function() {
 								btn.disabled = false;
 							});
 						})
-					}, [ _('重连') ])
+					}, [ _('Reconnect') ])
 				]),
-				E('p', { 'class': 'cbi-section-descr' }, [ _('一键配置会将所选接口改为静态地址并伪装 MAC，写入网关与 DNS（10.10.10.10、202.98.18.3），并关闭 dnsmasq 的 DNS 重绑定保护；执行前会自动备份，便于一键恢复。') ])
+				E('p', { 'class': 'cbi-section-descr' }, [ _('One-click setup switches the selected interface to a static address, spoofs the MAC address, sets the gateway and DNS servers (10.10.10.10, 202.98.18.3) and disables DNS rebind protection in dnsmasq. The previous settings are backed up automatically so they can be restored.') ])
 			]);
 
 			poll.add(function() {

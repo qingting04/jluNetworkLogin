@@ -10,7 +10,7 @@
 | 目录 | 说明 |
 |------|------|
 | `jluNetworkLogin/` | C 语言守护进程（C11，单文件），实现 DrCOM 协议认证循环 |
-| `luci-app-jluNetworkLogin/` | LuCI 管理页面（纯 JS，无翻译包依赖），提供配置、状态查看与一键操作 |
+| `luci-app-jluNetworkLogin/` | LuCI 管理页面（纯 JS），提供配置、状态查看与一键操作；文案走 LuCI i18n（英文 msgid + `po/zh_Hans` 中文翻译包） |
 | `.github/workflows/build.yml` | GitHub Actions 云编译脚本，fork 后自动产出可安装的 `.apk` |
 
 ## 特性
@@ -19,7 +19,7 @@
 - **procd 托管**：由 OpenWrt 原生进程管理器管理，断线自动 respawn，UCI 变更自动 reload
 - **ubus RPC 接口**：暴露 `status` / `reconnect` / `reload` 三个方法，可被脚本或其它服务调用
 - **系统日志**：经 ulog 写入 logd，`logread` 即可查看
-- **中文界面**：LuCI 页面内置中文，无需额外语言包
+- **中英双语界面**：文案用 LuCI 标准 i18n（英文 msgid），中文由 `luci-i18n-jluNetworkLogin-zh-cn` 翻译包提供，不装则是英文
 
 ## 快速开始（云编译，无需本地工具链）
 
@@ -40,19 +40,21 @@
 
 3. **触发编译**：push 到 `main` 分支，或到 Actions 页面手动 Run workflow。
 
-4. **下载产物**：编译完成后，进入对应 run 页面下载 `jluNetworkLogin` artifact，解压得到
-   `jluNetworkLogin_*.apk` 和 `luci-app-jluNetworkLogin_*.apk`。
+4. **下载产物**：编译完成后，进入对应 run 页面下载 `jluNetworkLogin` artifact，解压得到三个
+   `.apk`：`jluNetworkLogin_*.apk`、`luci-app-jluNetworkLogin_*.apk`、
+   `luci-i18n-jluNetworkLogin-zh-cn_*.apk`（中文界面翻译包，可选）。
 
-5. **安装**（将两个 `.apk` 上传到路由器后）：
+5. **安装**（将三个 `.apk` 上传到路由器后）：
 
    ```sh
    apk add --allow-untrusted /tmp/jluNetworkLogin_*.apk
    apk add --allow-untrusted /tmp/luci-app-jluNetworkLogin_*.apk
+   apk add --allow-untrusted /tmp/luci-i18n-jluNetworkLogin-*.apk   # 中文界面（可选）
    /etc/init.d/jlu-network-login enable
    /etc/init.d/jlu-network-login start
    ```
 
-   LuCI 入口：**系统 → 服务 → jluNetworkLogin**。
+   LuCI 入口：**系统 → 服务 → JLU Network Login**（中文界面下显示为「吉林大学校园网登录（DrCOM）」）。
 
 > **固件版本说明**：默认面向 ImmortalWrt 25.12（使用 `apk` 包管理）。若你的固件是旧版
 > `opkg` 系统，把 `SDK_VERSION` 改成对应的大版本即可产出 `.ipk`，安装时改用
@@ -179,6 +181,7 @@ jluNetworkLogin/
 │       └── jlu-network-login.config               # 默认 UCI 配置
 └── luci-app-jluNetworkLogin/
     ├── Makefile                       # LuCI 包定义（luci.mk）
+    ├── po/zh_Hans/luci-app-jluNetworkLogin.po   # 中文翻译（英文 msgid → 中文）
     └── root/
         ├── usr/share/luci/menu.d/luci-app-jluNetworkLogin.json
         ├── usr/share/rpcd/acl.d/luci-app-jluNetworkLogin.json

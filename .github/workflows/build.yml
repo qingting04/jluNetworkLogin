@@ -38,6 +38,10 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a -f
           make defconfig
+          # 打开简体中文，让 luci-i18n-jluNetworkLogin-zh-cn 翻译包也被编出来
+          sed -i 's/^# CONFIG_LUCI_LANG_zh_Hans is not set/CONFIG_LUCI_LANG_zh_Hans=y/' .config
+          grep -q '^CONFIG_LUCI_LANG_zh_Hans=y' .config || echo 'CONFIG_LUCI_LANG_zh_Hans=y' >> .config
+          make defconfig
           make package/jluNetworkLogin/compile V=s -j$(nproc)
           make package/luci-app-jluNetworkLogin/compile V=s -j$(nproc)
 
@@ -48,3 +52,4 @@ jobs:
           path: |
             immortalwrt-sdk-*/bin/packages/**/jluNetworkLogin*.apk
             immortalwrt-sdk-*/bin/packages/**/luci-app-jluNetworkLogin*.apk
+            immortalwrt-sdk-*/bin/packages/**/luci-i18n-jluNetworkLogin*.apk
