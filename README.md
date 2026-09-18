@@ -73,7 +73,7 @@ apk add --allow-untrusted /tmp/luci-i18n-jluNetworkLogin-*.apk      # 中文界�
 
 > `--allow-untrusted` 是因为本地/CI 编译的包没有官方签名。
 
-刷新 LuCI，入口在 **服务 → JLU Network Login**（中文界面下显示为「吉林大学校园网登录（DrCOM）」）。
+刷新 LuCI，入口在 **服务 → JLU Network Login**（中文界面下显示为「吉林大学校园网自动登录」）。
 
 > **固件版本说明**：默认面向 ImmortalWrt 25.12（使用 `apk` 包管理）。若你的固件是旧版 `opkg` 系统，把 `SDK_VERSION` 改成对应的大版本即可产出 `.ipk`，安装时改用 `opkg install jluNetworkLogin_*.ipk`。
 

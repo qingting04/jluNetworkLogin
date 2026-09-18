@@ -49,7 +49,7 @@ msgid "Interface"
 msgstr "接口"
 
 msgid "JLU Network Login"
-msgstr "吉林大学校园网登录（DrCOM）"
+msgstr "吉林大学校园网自动登录"
 
 msgid "Keeping alive"
 msgstr "保持在线"
