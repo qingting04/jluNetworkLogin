@@ -48,15 +48,15 @@
    ```sh
    apk add --allow-untrusted /tmp/jluNetworkLogin_*.apk
    apk add --allow-untrusted /tmp/luci-app-jluNetworkLogin_*.apk
-   /etc/init.d/drcomd enable
-   /etc/init.d/drcomd start
+   /etc/init.d/jlu-network-login enable
+   /etc/init.d/jlu-network-login start
    ```
 
    LuCI 入口：**系统 → 服务 → jluNetworkLogin**。
 
 > **固件版本说明**：默认面向 ImmortalWrt 25.12（使用 `apk` 包管理）。若你的固件是旧版
 > `opkg` 系统，把 `SDK_VERSION` 改成对应的大版本即可产出 `.ipk`，安装时改用
-> `opkg install drcomd_*.ipk`。
+> `opkg install jluNetworkLogin_*.ipk`。
 
 ## LuCI 页面功能
 
@@ -74,7 +74,7 @@
 
 ### 一键配置做了什么
 
-1. 备份当前 `drcom.main` 的 UCI 配置
+1. 备份当前 `jlu-network-login.main` 的 UCI 配置
 2. 将 `/etc/config/network` 中选中接口改为 `static`，写入 IP、MAC、网关；DNS 固定为 `10.10.10.10`、`202.98.18.3`，若无掩码则补 `255.255.255.0`
 3. 关闭 `/etc/config/dhcp` 中 dnsmasq 的 `rebind_protection`
 4. `ubus call network reload` 并重启 dnsmasq
@@ -82,10 +82,10 @@
 
 ## UCI 配置
 
-配置文件：`/etc/config/drcom`
+配置文件：`/etc/config/jlu-network-login`
 
 ```conf
-config drcom 'main'
+config main 'main'
     option enabled '1'
     option username '你的学号'
     option password '你的密码'
@@ -112,21 +112,21 @@ config drcom 'main'
 
 ```sh
 # 查看状态（连接状态、IP、MAC、最后错误等）
-ubus call drcom status
+ubus call jlu-network-login status
 
 # 手动重连
-ubus call drcom reconnect
+ubus call jlu-network-login reconnect
 
 # 重新加载 UCI 配置并重连（force 可跳过 UCI 加载失败检查）
-ubus call drcom reload
-ubus call drcom reload '{ "force": true }'
+ubus call jlu-network-login reload
+ubus call jlu-network-login reload '{ "force": true }'
 ```
 
 ## 查看日志
 
 ```sh
-logread -e drcomd
-logread | grep -i drcom
+logread -e jlu-network-login
+logread | grep -i jlu-network-login
 ```
 
 ## 协议流程
@@ -175,8 +175,8 @@ jluNetworkLogin/
 │   ├── Makefile                       # OpenWrt 包定义
 │   ├── src/drcomd.c                   # 守护进程（单文件 C 实现）
 │   └── files/
-│       ├── drcomd.init                # procd init 脚本
-│       └── drcom.config               # 默认 UCI 配置
+│       ├── jlu-network-login.init                # procd init 脚本
+│       └── jlu-network-login.config               # 默认 UCI 配置
 └── luci-app-jluNetworkLogin/
     ├── Makefile                       # LuCI 包定义（luci.mk）
     └── root/

@@ -9,13 +9,13 @@
 'require tools.widgets as widgets';
 
 var callStatus = rpc.declare({
-	object: 'drcom',
+	object: 'jlu-network-login',
 	method: 'status',
 	expect: { '': {} }
 });
 
 var callReconnect = rpc.declare({
-	object: 'drcom',
+	object: 'jlu-network-login',
 	method: 'reconnect',
 	expect: { '': {} }
 });
@@ -78,10 +78,10 @@ function updateStatusBox(res) {
 return view.extend({
 	handleOneClick: function(m, ev) {
 		return m.save().then(function() {
-			var ifname = uci.get('drcom', 'main', 'interface');
-			var ip = uci.get('drcom', 'main', 'ip');
-			var mac = uci.get('drcom', 'main', 'mac');
-			var gw = uci.get('drcom', 'main', 'gateway');
+			var ifname = uci.get('jlu-network-login', 'main', 'interface');
+			var ip = uci.get('jlu-network-login', 'main', 'ip');
+			var mac = uci.get('jlu-network-login', 'main', 'mac');
+			var gw = uci.get('jlu-network-login', 'main', 'gateway');
 
 			if (!ifname)
 				throw new Error(_('必须选择接口'));
@@ -111,15 +111,15 @@ return view.extend({
 				var oldMacaddr = uci.get('network', ifname, 'macaddr');
 				var oldRebind = uci.get('dhcp', dnsmasqSid, 'rebind_protection');
 
-				uci.set('drcom', 'main', 'backup_ifname', ifname);
-				uci.set('drcom', 'main', 'backup_proto', oldProto || '');
-				uci.set('drcom', 'main', 'backup_ipaddr', oldIpaddr || '');
-				uci.set('drcom', 'main', 'backup_netmask', oldNetmask || '');
-				uci.set('drcom', 'main', 'backup_gateway', oldGateway || '');
-				uci.set('drcom', 'main', 'backup_dns', oldDns || '');
-				uci.set('drcom', 'main', 'backup_macaddr', oldMacaddr || '');
-				uci.set('drcom', 'main', 'backup_rebind_protection', (oldRebind != null) ? String(oldRebind) : '');
-				uci.set('drcom', 'main', 'backup_time', String(Date.now()));
+				uci.set('jlu-network-login', 'main', 'backup_ifname', ifname);
+				uci.set('jlu-network-login', 'main', 'backup_proto', oldProto || '');
+				uci.set('jlu-network-login', 'main', 'backup_ipaddr', oldIpaddr || '');
+				uci.set('jlu-network-login', 'main', 'backup_netmask', oldNetmask || '');
+				uci.set('jlu-network-login', 'main', 'backup_gateway', oldGateway || '');
+				uci.set('jlu-network-login', 'main', 'backup_dns', oldDns || '');
+				uci.set('jlu-network-login', 'main', 'backup_macaddr', oldMacaddr || '');
+				uci.set('jlu-network-login', 'main', 'backup_rebind_protection', (oldRebind != null) ? String(oldRebind) : '');
+				uci.set('jlu-network-login', 'main', 'backup_time', String(Date.now()));
 
 				uci.set('network', ifname, 'proto', 'static');
 				uci.set('network', ifname, 'ipaddr', ip);
@@ -169,8 +169,8 @@ return view.extend({
 	handleRestoreConfirm: function(ev) {
 		ui.hideModal();
 
-		return Promise.all([ uci.load('drcom'), uci.load('network'), uci.load('dhcp') ]).then(function() {
-			var ifname = uci.get('drcom', 'main', 'backup_ifname');
+		return Promise.all([ uci.load('jlu-network-login'), uci.load('network'), uci.load('dhcp') ]).then(function() {
+			var ifname = uci.get('jlu-network-login', 'main', 'backup_ifname');
 			if (!ifname)
 				throw new Error(_('未找到备份，请先执行“一键配置”。'));
 			if (!uci.get('network', ifname))
@@ -187,17 +187,17 @@ return view.extend({
 				return uci.set(conf, sid, opt, val);
 			};
 
-			setOrUnset('network', ifname, 'proto', uci.get('drcom', 'main', 'backup_proto'));
-			setOrUnset('network', ifname, 'ipaddr', uci.get('drcom', 'main', 'backup_ipaddr'));
-			setOrUnset('network', ifname, 'netmask', uci.get('drcom', 'main', 'backup_netmask'));
-			setOrUnset('network', ifname, 'gateway', uci.get('drcom', 'main', 'backup_gateway'));
-			setOrUnset('network', ifname, 'dns', uci.get('drcom', 'main', 'backup_dns'));
-			setOrUnset('network', ifname, 'macaddr', uci.get('drcom', 'main', 'backup_macaddr'));
+			setOrUnset('network', ifname, 'proto', uci.get('jlu-network-login', 'main', 'backup_proto'));
+			setOrUnset('network', ifname, 'ipaddr', uci.get('jlu-network-login', 'main', 'backup_ipaddr'));
+			setOrUnset('network', ifname, 'netmask', uci.get('jlu-network-login', 'main', 'backup_netmask'));
+			setOrUnset('network', ifname, 'gateway', uci.get('jlu-network-login', 'main', 'backup_gateway'));
+			setOrUnset('network', ifname, 'dns', uci.get('jlu-network-login', 'main', 'backup_dns'));
+			setOrUnset('network', ifname, 'macaddr', uci.get('jlu-network-login', 'main', 'backup_macaddr'));
 
 			var dnsmasq = uci.sections('dhcp', 'dnsmasq');
 			var dnsmasqSid = (dnsmasq && dnsmasq.length) ? dnsmasq[0]['.name'] : null;
 			if (dnsmasqSid) {
-				var rp = uci.get('drcom', 'main', 'backup_rebind_protection');
+				var rp = uci.get('jlu-network-login', 'main', 'backup_rebind_protection');
 				uci.set('dhcp', dnsmasqSid, 'rebind_protection', (rp != null && rp !== '') ? rp : '1');
 			}
 
@@ -220,7 +220,7 @@ return view.extend({
 
 	load: function() {
 		return Promise.all([
-			uci.load('drcom'),
+			uci.load('jlu-network-login'),
 			callStatus().catch(function() { return {}; })
 		]);
 	},
@@ -228,9 +228,9 @@ return view.extend({
 	render: function(data) {
 		var initialStatus = data[1] || {};
 
-		var m = new form.Map('drcom', _('吉林大学 DrCOM'), _('吉林大学校园网 DrCOM 客户端守护进程。'));
+		var m = new form.Map('jlu-network-login', _('吉林大学 DrCOM'), _('吉林大学校园网 DrCOM 客户端守护进程。'));
 
-		var s = m.section(form.NamedSection, 'main', 'drcom', _('设置'));
+		var s = m.section(form.NamedSection, 'main', 'main', _('设置'));
 		s.addremove = false;
 
 		var o;

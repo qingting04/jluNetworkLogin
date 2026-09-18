@@ -567,7 +567,7 @@ static int load_uci_config(struct drcom_ctx *c) {
 		return -1;
 
 	struct uci_package *pkg = NULL;
-	if (uci_load(uc, "drcom", &pkg) != UCI_OK) {
+	if (uci_load(uc, "jlu-network-login", &pkg) != UCI_OK) {
 		uci_free_context(uc);
 		return -1;
 	}
@@ -720,7 +720,7 @@ static const struct ubus_method drcom_methods[] = {
 };
 
 static struct ubus_object_type drcom_obj_type =
-	UBUS_OBJECT_TYPE("drcom", drcom_methods);
+	UBUS_OBJECT_TYPE("jlu-network-login", drcom_methods);
 
 static void sig_handler(int signo) {
 	(void)signo;
@@ -737,7 +737,7 @@ int main(int argc, char **argv) {
 	srand((unsigned int)(time(NULL) ^ getpid()));
 
 	/* OpenWrt-native logging: goes to logd (logread) */
-	ulog_open(ULOG_SYSLOG, LOG_DAEMON, "drcomd");
+	ulog_open(ULOG_SYSLOG, LOG_DAEMON, "jlu-network-login");
 	ulog_threshold(LOG_INFO);
 	ULOG_INFO("starting\n");
 
@@ -756,7 +756,7 @@ int main(int argc, char **argv) {
 	}
 	ubus_add_uloop(g.ubus);
 
-	g.ubus_obj.name = "drcom";
+	g.ubus_obj.name = "jlu-network-login";
 	g.ubus_obj.type = &drcom_obj_type;
 	g.ubus_obj.methods = drcom_methods;
 	g.ubus_obj.n_methods = ARRAY_SIZE(drcom_methods);
