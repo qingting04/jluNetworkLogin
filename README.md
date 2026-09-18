@@ -1,4 +1,4 @@
-# jluDrcom
+# jluNetworkLogin
 
 吉林大学（JLU）校园网 DrCOM 认证客户端 —— 面向 OpenWrt / ImmortalWrt 的插件集合。
 
@@ -9,8 +9,8 @@
 
 | 目录 | 说明 |
 |------|------|
-| `drcomd/` | C 语言守护进程（C11，单文件），实现 DrCOM 协议认证循环 |
-| `luci-app-jludrcom/` | LuCI 管理页面（纯 JS，无翻译包依赖），提供配置、状态查看与一键操作 |
+| `jluNetworkLogin/` | C 语言守护进程（C11，单文件），实现 DrCOM 协议认证循环 |
+| `luci-app-jluNetworkLogin/` | LuCI 管理页面（纯 JS，无翻译包依赖），提供配置、状态查看与一键操作 |
 | `.github/workflows/build.yml` | GitHub Actions 云编译脚本，fork 后自动产出可安装的 `.apk` |
 
 ## 特性
@@ -40,19 +40,19 @@
 
 3. **触发编译**：push 到 `main` 分支，或到 Actions 页面手动 Run workflow。
 
-4. **下载产物**：编译完成后，进入对应 run 页面下载 `jluDrcom` artifact，解压得到
-   `drcomd_*.apk` 和 `luci-app-jludrcom_*.apk`。
+4. **下载产物**：编译完成后，进入对应 run 页面下载 `jluNetworkLogin` artifact，解压得到
+   `jluNetworkLogin_*.apk` 和 `luci-app-jluNetworkLogin_*.apk`。
 
 5. **安装**（将两个 `.apk` 上传到路由器后）：
 
    ```sh
-   apk add --allow-untrusted /tmp/drcomd_*.apk
-   apk add --allow-untrusted /tmp/luci-app-jludrcom_*.apk
+   apk add --allow-untrusted /tmp/jluNetworkLogin_*.apk
+   apk add --allow-untrusted /tmp/luci-app-jluNetworkLogin_*.apk
    /etc/init.d/drcomd enable
    /etc/init.d/drcomd start
    ```
 
-   LuCI 入口：**系统 → 服务 → 吉林大学 DrCOM**。
+   LuCI 入口：**系统 → 服务 → jluNetworkLogin**。
 
 > **固件版本说明**：默认面向 ImmortalWrt 25.12（使用 `apk` 包管理）。若你的固件是旧版
 > `opkg` 系统，把 `SDK_VERSION` 改成对应的大版本即可产出 `.ipk`，安装时改用
@@ -151,11 +151,11 @@ challenge  →  login  →  keepalive (stage 0 → 1 → 2 → 循环)
 若你习惯本地编译，也可把两个目录放进 OpenWrt / ImmortalWrt 源码树：
 
 ```sh
-cp -r drcomd            openwrt/package/drcomd/
-cp -r luci-app-jludrcom openwrt/package/luci-app-jludrcom/
-make menuconfig          # LuCI → Applications → luci-app-jludrcom；Network → drcomd
-make package/drcomd/compile -j$(nproc) V=s
-make package/luci-app-jludrcom/compile -j$(nproc) V=s
+cp -r jluNetworkLogin            openwrt/package/jluNetworkLogin/
+cp -r luci-app-jluNetworkLogin openwrt/package/luci-app-jluNetworkLogin/
+make menuconfig          # LuCI → Applications → luci-app-jluNetworkLogin；Network → jluNetworkLogin
+make package/jluNetworkLogin/compile -j$(nproc) V=s
+make package/luci-app-jluNetworkLogin/compile -j$(nproc) V=s
 ```
 
 > **注意**：OpenWrt / ImmortalWrt 不同大版本之间 ABI 包名（libubus / libubox / libuci 的版本化依赖）
@@ -174,20 +174,20 @@ make package/luci-app-jludrcom/compile -j$(nproc) V=s
 ## 文件结构
 
 ```
-jluDrcom/
+jluNetworkLogin/
 ├── .github/workflows/build.yml        # GitHub Actions 云编译
-├── drcomd/
+├── jluNetworkLogin/
 │   ├── Makefile                       # OpenWrt 包定义
 │   ├── src/drcomd.c                   # 守护进程（单文件 C 实现）
 │   └── files/
 │       ├── drcomd.init                # procd init 脚本
 │       └── drcom.config               # 默认 UCI 配置
-└── luci-app-jludrcom/
+└── luci-app-jluNetworkLogin/
     ├── Makefile                       # LuCI 包定义（luci.mk）
     └── root/
-        ├── usr/share/luci/menu.d/luci-app-jludrcom.json
-        ├── usr/share/rpcd/acl.d/luci-app-jludrcom.json
-        └── www/luci-static/resources/view/jludrcom.js
+        ├── usr/share/luci/menu.d/luci-app-jluNetworkLogin.json
+        ├── usr/share/rpcd/acl.d/luci-app-jluNetworkLogin.json
+        └── www/luci-static/resources/view/jluNetworkLogin.js
 ```
 
 ## 免责声明

@@ -1,6 +1,6 @@
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=drcomd
+PKG_NAME:=jluNetworkLogin
 PKG_VERSION:=1.0.0
 PKG_RELEASE:=1
 
@@ -8,14 +8,14 @@ PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/drcomd
+define Package/jluNetworkLogin
   SECTION:=net
   CATEGORY:=Network
-  TITLE:=DrCOM client daemon
+  TITLE:=JLU DrCOM client daemon
   DEPENDS:=+libubus +libubox +libuci
 endef
 
-define Package/drcomd/description
+define Package/jluNetworkLogin/description
   Lightweight DrCOM client daemon (challenge/login/keepalive) for campus networks.
 endef
 
@@ -32,7 +32,7 @@ define Build/Compile
 		$(TARGET_LDFLAGS) -L$(STAGING_DIR)/usr/lib -lubus -lubox -luci
 endef
 
-define Package/drcomd/install
+define Package/jluNetworkLogin/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/drcomd $(1)/usr/sbin/drcomd
 	$(INSTALL_DIR) $(1)/etc/init.d
@@ -41,4 +41,4 @@ define Package/drcomd/install
 	$(INSTALL_CONF) ./files/drcom.config $(1)/etc/config/drcom
 endef
 
-$(eval $(call BuildPackage,drcomd))
+$(eval $(call BuildPackage,jluNetworkLogin))

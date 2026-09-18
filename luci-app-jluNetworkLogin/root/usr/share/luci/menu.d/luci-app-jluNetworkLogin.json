@@ -1,0 +1,13 @@
+{
+  "admin/services/jluNetworkLogin": {
+    "title": "jluNetworkLogin",
+    "order": 60,
+    "action": {
+      "type": "view",
+      "path": "jluNetworkLogin"
+    },
+    "depends": {
+      "acl": [ "luci-app-jluNetworkLogin" ]
+    }
+  }
+}

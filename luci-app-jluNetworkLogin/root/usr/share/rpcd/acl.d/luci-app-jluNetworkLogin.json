@@ -1,5 +1,5 @@
 {
-  "luci-app-jludrcom": {
+  "luci-app-jluNetworkLogin": {
     "description": "Grant access to JLU DrCOM configuration and status",
     "read": {
       "uci": [ "drcom", "network", "dhcp" ],

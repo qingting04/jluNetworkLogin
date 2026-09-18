@@ -29,8 +29,8 @@ jobs:
 
       - name: Copy packages into SDK
         run: |
-          cp -r drcomd immortalwrt-sdk-*/package/
-          cp -r luci-app-jludrcom immortalwrt-sdk-*/package/
+          cp -r jluNetworkLogin immortalwrt-sdk-*/package/
+          cp -r luci-app-jluNetworkLogin immortalwrt-sdk-*/package/
 
       - name: Build
         run: |
@@ -38,13 +38,13 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a -f
           make defconfig
-          make package/drcomd/compile V=s -j$(nproc)
-          make package/luci-app-jludrcom/compile V=s -j$(nproc)
+          make package/jluNetworkLogin/compile V=s -j$(nproc)
+          make package/luci-app-jluNetworkLogin/compile V=s -j$(nproc)
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: jluDrcom
+          name: jluNetworkLogin
           path: |
-            immortalwrt-sdk-*/bin/packages/**/drcomd*.apk
-            immortalwrt-sdk-*/bin/packages/**/luci-app-jludrcom*.apk
+            immortalwrt-sdk-*/bin/packages/**/jluNetworkLogin*.apk
+            immortalwrt-sdk-*/bin/packages/**/luci-app-jluNetworkLogin*.apk
