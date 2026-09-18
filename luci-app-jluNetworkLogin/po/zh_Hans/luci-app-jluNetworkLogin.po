@@ -12,9 +12,6 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-msgid "Actions"
-msgstr "操作"
-
 msgid "An interface must be selected"
 msgstr "必须选择接口"
 
@@ -26,9 +23,6 @@ msgstr "连接状态"
 
 msgid "Continue"
 msgstr "继续"
-
-msgid "DrCOM client daemon for the JLU campus network."
-msgstr "吉林大学校园网 DrCOM 客户端守护进程。"
 
 msgid "Enable"
 msgstr "启用"
@@ -87,9 +81,6 @@ msgstr "一键配置"
 msgid "One-click setup applied (static IP, MAC address, gateway and DNS are set, DNS rebind protection is disabled)."
 msgstr "一键配置已应用（静态 IP/MAC/网关/DNS + 关闭 DNS 重绑定保护）。"
 
-msgid "One-click setup switches the selected interface to a static address, spoofs the MAC address, sets the gateway and DNS servers (10.10.10.10, 202.98.18.3) and disables DNS rebind protection in dnsmasq. The previous settings are backed up automatically so they can be restored."
-msgstr "一键配置会将所选接口改为静态地址并伪装 MAC，写入网关与 DNS（10.10.10.10、202.98.18.3），并关闭 dnsmasq 的 DNS 重绑定保护；执行前会自动备份，便于一键恢复。"
-
 msgid "Online"
 msgstr "已在线"
 
@@ -108,11 +99,8 @@ msgstr "恢复已应用。"
 msgid "Restore the previous settings?"
 msgstr "确认恢复设置？"
 
-msgid "Settings"
-msgstr "设置"
-
-msgid "Status"
-msgstr "状态"
+msgid "Service status"
+msgstr "服务状态"
 
 msgid "The IP address is required"
 msgstr "必须填写 IP 地址"

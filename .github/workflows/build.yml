@@ -18,6 +18,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Sanity checks（出厂默认值一致性 / 翻译覆盖 / JS 语法）
+        run: python3 luci-app-jluNetworkLogin/test/check.py
+
       - name: Install zstd
         run: sudo apt-get update && sudo apt-get install -y zstd
 

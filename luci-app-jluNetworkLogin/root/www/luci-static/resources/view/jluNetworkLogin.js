@@ -32,25 +32,6 @@ var callInitAction = rpc.declare({
 	params: [ 'name', 'action' ]
 });
 
-function renderStatusBox(initial) {
-	var state = (initial && initial.state) ? initial.state : '-';
-	var lastErr = (initial && initial.last_error) ? initial.last_error : '';
-
-	return E('div', { 'class': 'cbi-section' }, [
-		E('h3', {}, [ _('Status') ]),
-		E('div', { 'class': 'table', 'id': 'drcom-status-table' }, [
-			E('div', { 'class': 'tr' }, [
-				E('div', { 'class': 'td left' }, [ _('Connection state') ]),
-				E('div', { 'class': 'td left', 'id': 'drcom-status-state' }, [ state ])
-			]),
-			E('div', { 'class': 'tr' }, [
-				E('div', { 'class': 'td left' }, [ _('Last error') ]),
-				E('div', { 'class': 'td left', 'id': 'drcom-status-err' }, [ lastErr || '-' ])
-			])
-		])
-	]);
-}
-
 function updateStatusBox(res) {
 	var set = function(id, val) {
 		var el = document.getElementById(id);
@@ -227,9 +208,9 @@ return view.extend({
 	render: function(data) {
 		var initialStatus = data[1] || {};
 
-		var m = new form.Map('jlu-network-login', _('JLU Network Login'), _('DrCOM client daemon for the JLU campus network.'));
+		var m = new form.Map('jlu-network-login', _('JLU Network Login'));
 
-		var s = m.section(form.NamedSection, 'main', 'main', _('Settings'));
+		var s = m.section(form.NamedSection, 'main', 'main');
 		s.addremove = false;
 
 		var o;
@@ -264,11 +245,23 @@ return view.extend({
 		o.rmempty = false;
 
 		return m.render().then(function(mapEl) {
-			var statusBox = renderStatusBox(initialStatus);
-
-			var actionsBox = E('div', { 'class': 'cbi-section' }, [
-				E('h3', {}, [ _('Actions') ]),
-				E('div', { 'class': 'cbi-section-actions' }, [
+			/* 状态与操作按钮放在同一块里，插到页面标题之后、设置之前
+			 * （版式与 hustNetworkLogin 的页面保持一致） */
+			var box = E('div', { 'class': 'cbi-section' }, [
+				E('h3', {}, [ _('Service status') ]),
+				E('div', { 'class': 'table' }, [
+					E('div', { 'class': 'tr' }, [
+						E('div', { 'class': 'td left' }, [ _('Connection state') ]),
+						E('div', { 'class': 'td left', 'id': 'drcom-status-state' },
+							[ (initialStatus && initialStatus.state) ? initialStatus.state : '-' ])
+					]),
+					E('div', { 'class': 'tr' }, [
+						E('div', { 'class': 'td left' }, [ _('Last error') ]),
+						E('div', { 'class': 'td left', 'id': 'drcom-status-err' },
+							[ (initialStatus && initialStatus.last_error) || '-' ])
+					])
+				]),
+				E('div', { 'class': 'cbi-page-actions' }, [
 					E('button', {
 						'class': 'cbi-button cbi-button-positive',
 						'click': ui.createHandlerFn(this, function(ev) {
@@ -297,15 +290,16 @@ return view.extend({
 							});
 						})
 					}, [ _('Reconnect') ])
-				]),
-				E('p', { 'class': 'cbi-section-descr' }, [ _('One-click setup switches the selected interface to a static address, spoofs the MAC address, sets the gateway and DNS servers (10.10.10.10, 202.98.18.3) and disables DNS rebind protection in dnsmasq. The previous settings are backed up automatically so they can be restored.') ])
+				])
 			]);
 
 			poll.add(function() {
 				return callStatus().then(updateStatusBox).catch(function() {});
 			});
 
-			return E([], [ statusBox, actionsBox, mapEl ]);
+			mapEl.insertBefore(box, mapEl.querySelector('.cbi-section'));
+
+			return mapEl;
 		}.bind(this));
 	}
 });

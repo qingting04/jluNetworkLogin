@@ -12,9 +12,6 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "Actions"
-msgstr ""
-
 msgid "An interface must be selected"
 msgstr ""
 
@@ -25,9 +22,6 @@ msgid "Connection state"
 msgstr ""
 
 msgid "Continue"
-msgstr ""
-
-msgid "DrCOM client daemon for the JLU campus network."
 msgstr ""
 
 msgid "Enable"
@@ -87,9 +81,6 @@ msgstr ""
 msgid "One-click setup applied (static IP, MAC address, gateway and DNS are set, DNS rebind protection is disabled)."
 msgstr ""
 
-msgid "One-click setup switches the selected interface to a static address, spoofs the MAC address, sets the gateway and DNS servers (10.10.10.10, 202.98.18.3) and disables DNS rebind protection in dnsmasq. The previous settings are backed up automatically so they can be restored."
-msgstr ""
-
 msgid "Online"
 msgstr ""
 
@@ -108,10 +99,7 @@ msgstr ""
 msgid "Restore the previous settings?"
 msgstr ""
 
-msgid "Settings"
-msgstr ""
-
-msgid "Status"
+msgid "Service status"
 msgstr ""
 
 msgid "The IP address is required"
