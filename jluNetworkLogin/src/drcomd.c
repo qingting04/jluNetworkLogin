@@ -584,8 +584,7 @@ static int load_uci_config(struct drcom_ctx *c) {
 	v = uci_lookup_option_string(uc, s, "enabled");
 	c->enabled = (v && (!strcmp(v, "1") || !strcasecmp(v, "true") || !strcasecmp(v, "yes")));
 
-	v = uci_lookup_option_string(uc, s, "server");
-	snprintf(c->server, sizeof(c->server), "%s", (v && *v) ? v : DRCOM_DEFAULT_SERVER);
+	snprintf(c->server, sizeof(c->server), "%s", DRCOM_DEFAULT_SERVER);
 
 	v = uci_lookup_option_string(uc, s, "username");
 	snprintf(c->username, sizeof(c->username), "%s", v ? v : "");
@@ -609,10 +608,7 @@ static int load_uci_config(struct drcom_ctx *c) {
 		}
 	}
 
-	v = uci_lookup_option_string(uc, s, "hostname");
-	if (v && *v) {
-		snprintf(c->hostname, sizeof(c->hostname), "%s", v);
-	} else {
+	{
 		char hn[64] = {0};
 		if (gethostname(hn, sizeof(hn) - 1) == 0)
 			snprintf(c->hostname, sizeof(c->hostname), "%s", hn);
@@ -620,18 +616,11 @@ static int load_uci_config(struct drcom_ctx *c) {
 			snprintf(c->hostname, sizeof(c->hostname), "OpenWrt");
 	}
 
-	v = uci_lookup_option_string(uc, s, "dns");
-	snprintf(c->dns, sizeof(c->dns), "%s", v ? v : "10.10.10.10");
+	snprintf(c->dns, sizeof(c->dns), "%s", "10.10.10.10");
 
-	v = uci_lookup_option_string(uc, s, "client_port");
-	c->client_port = v ? atoi(v) : DRCOM_DEFAULT_PORT;
-	if (c->client_port <= 0 || c->client_port > 65535)
-		c->client_port = DRCOM_DEFAULT_PORT;
+	c->client_port = DRCOM_DEFAULT_PORT;
 
-	v = uci_lookup_option_string(uc, s, "retry_interval");
-	c->retry_interval_s = v ? atoi(v) : 28;
-	if (c->retry_interval_s <= 0)
-		c->retry_interval_s = 28;
+	c->retry_interval_s = 28;
 
 	v = uci_lookup_option_string(uc, s, "mac");
 	c->mac_ok = parse_mac(v, c->mac);
