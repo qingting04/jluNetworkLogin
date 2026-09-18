@@ -27,10 +27,9 @@ var callNetworkReload = rpc.declare({
 });
 
 var callInitAction = rpc.declare({
-	object: 'luci',
-	method: 'setInitAction',
-	params: [ 'name', 'action' ],
-	expect: { result: false }
+	object: 'rc',
+	method: 'init',
+	params: [ 'name', 'action' ]
 });
 
 function renderStatusBox(initial) {

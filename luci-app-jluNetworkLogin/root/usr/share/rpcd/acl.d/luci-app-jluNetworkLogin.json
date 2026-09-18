@@ -4,8 +4,7 @@
     "read": {
       "uci": [ "jlu-network-login", "network", "dhcp" ],
       "ubus": {
-        "jlu-network-login": [ "status" ],
-        "luci": [ "setInitAction" ]
+        "jlu-network-login": [ "status" ]
       }
     },
     "write": {
@@ -13,7 +12,7 @@
       "ubus": {
         "jlu-network-login": [ "reconnect" ],
         "network": [ "reload" ],
-        "luci": [ "setInitAction" ]
+        "rc": [ "init" ]
       }
     }
   }
