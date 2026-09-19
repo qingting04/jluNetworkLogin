@@ -83,6 +83,24 @@ if subprocess.call(['sh', '-c', 'command -v node >/dev/null']) == 0:
 else:
     print('  skip node 未安装，跳过 JS 语法检查')
 
+print('== 4. 文案不撞 LuCI 基础语言包 ==')
+# LuCI 的基础语言包（domain=base）覆盖多个组件；本应用若复用其中已有的英文串，
+# 不装本应用翻译包时也会被基础语言包翻成中文，出现「半中半英」。联网校验一次。
+LUCI_BASE_PO = ('https://raw.githubusercontent.com/openwrt/luci/master/'
+                'modules/luci-base/po/zh_Hans/base.po')
+try:
+    import urllib.request
+
+    with urllib.request.urlopen(LUCI_BASE_PO, timeout=20) as resp:
+        base_po = resp.read().decode('utf-8', 'replace')
+
+    base_ids = {json.loads('"%s"' % i)
+                for i in re.findall(r'^msgid "(.*)"$', base_po, re.M) if i}
+    clash = sorted(x for x in (code_ids & base_ids) if x)
+    check(not clash, '不与 LuCI 基础库串撞车（撞：%s）' % clash)
+except Exception as exc:  # 离线时跳过，不阻塞构建
+    print('  skip 取不到 LuCI 基础 po（%s），跳过' % exc)
+
 print()
 print('%d 项失败' % fails)
 sys.exit(1 if fails else 0)

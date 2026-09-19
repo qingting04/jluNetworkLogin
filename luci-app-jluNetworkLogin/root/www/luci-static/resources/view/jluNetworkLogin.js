@@ -83,13 +83,13 @@ return view.extend({
 				var missing = [];
 
 				if (!ifname)
-					missing.push(_('Interface'));
+					missing.push(_('Campus interface'));
 				if (!ip)
-					missing.push(_('IP address'));
+					missing.push(_('Campus IP address'));
 				if (!mac)
-					missing.push(_('MAC address'));
+					missing.push(_('Campus MAC address'));
 				if (!gw)
-					missing.push(_('Gateway'));
+					missing.push(_('Campus gateway'));
 
 				ui.addNotification(_('One-click setup'),
 					E('p', [ _('Fill in these fields first: %s').format(missing.join(' / ')) ]), 'warning');
@@ -161,11 +161,11 @@ return view.extend({
 				E('button', {
 					'class': 'btn',
 					'click': ui.createHandlerFn(this, ui.hideModal)
-				}, [ _('Cancel') ]), ' ',
+				}, [ _('Keep as is') ]), ' ',
 				E('button', {
 					'class': 'btn cbi-button-action important',
 					'click': ui.createHandlerFn(this, 'handleRestoreConfirm')
-				}, [ _('Continue') ])
+				}, [ _('Restore now') ])
 			])
 		]);
 	},
@@ -262,29 +262,29 @@ return view.extend({
 		s.addremove = false;
 
 		var o;
-		o = s.option(form.Flag, 'enabled', _('Enable'));
+		o = s.option(form.Flag, 'enabled', _('Enable automatic login'));
 		o.default = o.disabled;
 
-		o = s.option(form.Value, 'username', _('Username'));
+		o = s.option(form.Value, 'username', _('Login account'));
 		o.datatype = 'string';
 
-		o = s.option(form.Value, 'password', _('Password'));
+		o = s.option(form.Value, 'password', _('Login password'));
 		o.password = true;
 		o.datatype = 'string';
 
-		o = s.option(widgets.NetworkSelect, 'interface', _('Interface'));
+		o = s.option(widgets.NetworkSelect, 'interface', _('Campus interface'));
 		o.nocreate = true;
 		o.default = 'wan';
 
-		o = s.option(form.Value, 'ip', _('IP address'));
+		o = s.option(form.Value, 'ip', _('Campus IP address'));
 		o.datatype = 'ip4addr';
 		o.placeholder = '10.100.61.100';
 
-		o = s.option(form.Value, 'gateway', _('Gateway'));
+		o = s.option(form.Value, 'gateway', _('Campus gateway'));
 		o.datatype = 'ip4addr';
 		o.placeholder = '10.100.61.1';
 
-		o = s.option(form.Value, 'mac', _('MAC address'));
+		o = s.option(form.Value, 'mac', _('Campus MAC address'));
 		o.datatype = 'macaddr';
 		o.placeholder = 'aa:bb:cc:dd:ee:ff';
 
