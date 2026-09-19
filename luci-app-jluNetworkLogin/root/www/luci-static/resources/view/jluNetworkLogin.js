@@ -78,7 +78,7 @@ return view.extend({
 			var mac = uci.get('jlu-network-login', 'main', 'mac');
 			var gw = uci.get('jlu-network-login', 'main', 'gateway');
 
-			/* 缺项时按钮本来就是灰的；这里再兜底一次：什么都不改 */
+			/* 缺项时什么都不做：不写任何配置、不弹提示 */
 			if (!ifname || !ip || !mac || !gw)
 				return;
 
@@ -216,31 +216,6 @@ return view.extend({
 
 	render: function(data) {
 		var initialStatus = data[1] || {};
-		var oneClickBtn = null;
-
-		/* 「一键配置」需要 接口 + IP + 网关 + MAC 齐全；缺项就置灰按钮、点了也不改 */
-		var fields = {
-			'interface': uci.get('jlu-network-login', 'main', 'interface') || 'wan',   /* 与 o.default='wan' 一致 */
-			'ip': uci.get('jlu-network-login', 'main', 'ip') || null,
-			'gateway': uci.get('jlu-network-login', 'main', 'gateway') || null,
-			'mac': uci.get('jlu-network-login', 'main', 'mac') || null
-		};
-
-		var oneClickReady = function() {
-			return !!(fields.interface && fields.ip && fields.gateway && fields.mac);
-		};
-
-		var refreshOneClick = function() {
-			if (oneClickBtn)
-				oneClickBtn.disabled = !oneClickReady();
-		};
-
-		var watchField = function(name) {
-			return function(ev, section_id, value) {
-				fields[name] = (value != null && String(value) !== '') ? String(value) : null;
-				refreshOneClick();
-			};
-		};
 
 		var m = new form.Map('jlu-network-login', _('JLU Network Login'));
 
@@ -261,22 +236,18 @@ return view.extend({
 		o = s.option(widgets.NetworkSelect, 'interface', _('Interface'));
 		o.nocreate = true;
 		o.default = 'wan';
-		o.onchange = watchField('interface');
 
 		o = s.option(form.Value, 'ip', _('IP address'));
 		o.datatype = 'ip4addr';
 		o.placeholder = '10.100.61.100';
-		o.onchange = watchField('ip');
 
 		o = s.option(form.Value, 'gateway', _('Gateway'));
 		o.datatype = 'ip4addr';
 		o.placeholder = '10.100.61.1';
-		o.onchange = watchField('gateway');
 
 		o = s.option(form.Value, 'mac', _('MAC address'));
 		o.datatype = 'macaddr';
 		o.placeholder = 'aa:bb:cc:dd:ee:ff';
-		o.onchange = watchField('mac');
 
 		return m.render().then(function(mapEl) {
 			/* 状态与操作按钮放在同一块里，插到页面标题之后、设置之前
@@ -296,13 +267,13 @@ return view.extend({
 					])
 				]),
 				E('div', { 'class': 'cbi-page-actions' }, [
-					oneClickBtn = E('button', {
+					E('button', {
 						'class': 'cbi-button cbi-button-positive',
 						'click': ui.createHandlerFn(this, function(ev) {
 							var btn = ev.currentTarget;
 							btn.disabled = true;
 							return this.handleOneClick(m, ev).catch(function() {}).then(function() {
-								refreshOneClick();
+								btn.disabled = false;
 							});
 						})
 					}, [ _('One-click setup') ]),
@@ -326,8 +297,6 @@ return view.extend({
 					}, [ _('Reconnect') ])
 				])
 			]);
-
-			refreshOneClick();
 
 			poll.add(function() {
 				return callStatus().then(updateStatusBox).catch(function() {});
