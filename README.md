@@ -235,10 +235,10 @@ fork 后按自己路由器改 workflow 顶部 4 个变量（`TARGET` / `SUBTARGE
 ## 说明
 
 - **包名/显示名是小驼峰 `jluNetworkLogin`**；但 UCI config 名、init.d 脚本名、ubus 对象名、守护进程的 syslog 标识保持 kebab-case `jlu-network-login`（OpenWrt 系统机制约定）。
-- **中英双语界面**：LuCI 文案用英文 msgid，中文由 `luci-i18n-jluNetworkLogin-zh-cn` 翻译包提供，不装则是纯英文。
-  文案刻意避开 LuCI 基础库已有的串（原来用的 `Interface` / `Gateway` / `IP address` / `MAC address` / `Username` / `Password` / `Enable` / `Cancel` / `Continue` 会被基础中文语言包翻译），否则会出现「不装翻译包也半中半英」的情况。改后统一用 `Campus interface` / `Campus gateway` / `Login account` 等本应用专属措辞。
+- **中英双语界面**：LuCI 文案用英文 msgid，中文由 `luci-i18n-jluNetworkLogin-zh-cn` 翻译包提供。
+  注意：`Interface` / `Gateway` / `IP address` / `MAC address` / `Username` / `Password` / `Enable` / `Cancel` / `Continue` 这些**通用词与 LuCI 基础库重名** —— 装了 LuCI 中文语言包（`luci-i18n-base-zh-cn`）时，即使不装本应用翻译包，这几个词也会显示中文，其余仍是英文。属预期行为；要看全中文请装本应用翻译包。
 - **LuCI 版本**：JS 框架需 LuCI 23.05+，ImmortalWrt 23.05 / 24.10 / 25.x 均支持。
-- **守护进程只在 `enabled=1` 时才由 init 脚本启动**；未启用时 ubus 对象不存在，页面状态区为空、点「重连」会提示先启用（而不是抛 RPC 错误）。
+- **守护进程只在 `enabled=1` 时才由 init 脚本启动**；未启用/未运行时 ubus 对象不存在，页面状态区显示「服务未运行」、原因写在「最近错误」，并且「重连」按钮保持禁用（与 hustNetworkLogin 一致）。
 
 ## 免责声明
 

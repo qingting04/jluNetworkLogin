@@ -59,15 +59,25 @@ function err_label(err) {
 	return err ? (map[err] || err) : '-';
 }
 
-function updateStatusBox(res) {
-	var set = function(id, val) {
-		var el = document.getElementById(id);
-		if (el)
-			el.textContent = val;
-	};
+function set_text(id, text) {
+	var el = document.getElementById(id);
 
-	set('drcom-status-state', state_label(res && res.state));
-	set('drcom-status-err', err_label(res && res.last_error));
+	if (el)
+		el.textContent = text;
+}
+
+/*
+ * ubus 总线上没有 jlu-network-login 这个对象时，uhttpd 的 ubus 插件会直接回
+ * -32000「Object not found」（在 ACL 校验之前），含义只有一个：守护进程没在跑。
+ * 把它翻译成人能照着做的话，别让用户只看到一句 RPC 报错。
+ */
+function rpc_message(e) {
+	var msg = String(e);
+
+	if (msg.indexOf('Object not found') > -1)
+		return _('the login service is not running (no ubus object) - start it with "/etc/init.d/jlu-network-login restart"');
+
+	return msg;
 }
 
 return view.extend({
@@ -83,13 +93,13 @@ return view.extend({
 				var missing = [];
 
 				if (!ifname)
-					missing.push(_('Campus interface'));
+					missing.push(_('Interface'));
 				if (!ip)
-					missing.push(_('Campus IP address'));
+					missing.push(_('IP address'));
 				if (!mac)
-					missing.push(_('Campus MAC address'));
+					missing.push(_('MAC address'));
 				if (!gw)
-					missing.push(_('Campus gateway'));
+					missing.push(_('Gateway'));
 
 				ui.addNotification(_('One-click setup'),
 					E('p', [ _('Fill in these fields first: %s').format(missing.join(' / ')) ]), 'warning');
@@ -161,11 +171,11 @@ return view.extend({
 				E('button', {
 					'class': 'btn',
 					'click': ui.createHandlerFn(this, ui.hideModal)
-				}, [ _('Keep as is') ]), ' ',
+				}, [ _('Cancel') ]), ' ',
 				E('button', {
 					'class': 'btn cbi-button-action important',
 					'click': ui.createHandlerFn(this, 'handleRestoreConfirm')
-				}, [ _('Restore now') ])
+				}, [ _('Continue') ])
 			])
 		]);
 	},
@@ -225,82 +235,114 @@ return view.extend({
 	handleReconnect: function(ev) {
 		var btn = ev.currentTarget;
 
-		/* 守护进程只在 enabled=1 时才由 init 脚本拉起，未启用时 ubus 对象不存在，
-		 * 直接调用会报 "Object not found"，这里先拦一层给出可读提示。 */
+		/* 没启用时守护进程根本不会启动，点重连没有意义 —— 直接提示并刷新状态 */
 		if (uci.get('jlu-network-login', 'main', 'enabled') != '1') {
 			ui.addNotification(_('Reconnect'),
 				E('p', [ _('The service is disabled - enable it and apply the settings first.') ]), 'warning');
 
-			return Promise.resolve();
+			return this.refresh_status();
 		}
 
 		btn.disabled = true;
 
-		return callReconnect().catch(function(e) {
+		return callReconnect().then(function(res) {
+			if (res && res.result)
+				ui.addNotification(_('Reconnect'),
+					E('p', [ _('The login service is authenticating again now. Check "logread -e jlu-network-login" for details.') ]), 'info');
+			else
+				ui.addNotification(_('Reconnect'),
+					E('p', [ _('Reconnect failed: %s').format((res && res.error) || _('unknown error')) ]), 'warning');
+		}).catch(function(e) {
 			ui.addNotification(_('Reconnect'),
-				E('p', [ _('Reconnect failed - the login service does not seem to be running. Enable it and apply the settings first.') ]), 'warning');
-
-			console.error('jlu-network-login: reconnect failed:', e);
+				E('p', [ _('Reconnect failed: %s').format(rpc_message(e)) ]), 'warning');
 		}).then(function() {
 			btn.disabled = false;
-		});
+
+			return this.refresh_status();
+		}.bind(this));
+	},
+
+	/* 守护进程没在跑（ubus 对象不存在）时禁用「重连」按钮：
+	 * 此时点它只会拿到一句 RPC 报错，按钮状态本身就把问题说清楚了。 */
+	set_available: function(up) {
+		var btn = document.getElementById('jlu-reconnect');
+
+		if (btn)
+			btn.disabled = !up;
+	},
+
+	refresh_status: function() {
+		/* 只显示连接状态与最近错误。优先级：设置没启用 > 守护进程上报的最近错误 >
+		 * RPC 失败原因。没启用时守护进程不会启动，提示「先启用」比任何日志都有用。 */
+		var disabled = (uci.get('jlu-network-login', 'main', 'enabled') != '1')
+			? _('The service is disabled - enable it and apply the settings first.')
+			: null;
+
+		return callStatus().then(function(st) {
+			set_text('jlu-status-state', state_label(st.state));
+			set_text('jlu-status-err', disabled || err_label(st.last_error));
+			this.set_available(true);
+		}.bind(this)).catch(function(e) {
+			set_text('jlu-status-state', _('Service not running'));
+			set_text('jlu-status-err', disabled || rpc_message(e));
+			this.set_available(false);
+		}.bind(this));
 	},
 
 	load: function() {
-		return Promise.all([
-			uci.load('jlu-network-login'),
-			callStatus().catch(function() { return {}; })
-		]);
+		return uci.load('jlu-network-login');
 	},
 
 	render: function(data) {
-		var initialStatus = data[1] || {};
-
 		var m = new form.Map('jlu-network-login', _('JLU Network Login'));
 
 		var s = m.section(form.NamedSection, 'main', 'main');
 		s.addremove = false;
 
 		var o;
-		o = s.option(form.Flag, 'enabled', _('Enable automatic login'));
+		o = s.option(form.Flag, 'enabled', _('Enable'));
 		o.default = o.disabled;
 
-		o = s.option(form.Value, 'username', _('Login account'));
+		o = s.option(form.Value, 'username', _('Username'));
 		o.datatype = 'string';
 
-		o = s.option(form.Value, 'password', _('Login password'));
+		o = s.option(form.Value, 'password', _('Password'));
 		o.password = true;
 		o.datatype = 'string';
 
-		o = s.option(widgets.NetworkSelect, 'interface', _('Campus interface'));
+		o = s.option(widgets.NetworkSelect, 'interface', _('Interface'));
 		o.nocreate = true;
 		o.default = 'wan';
 
-		o = s.option(form.Value, 'ip', _('Campus IP address'));
+		o = s.option(form.Value, 'ip', _('IP address'));
 		o.datatype = 'ip4addr';
 		o.placeholder = '10.100.61.100';
 
-		o = s.option(form.Value, 'gateway', _('Campus gateway'));
+		o = s.option(form.Value, 'gateway', _('Gateway'));
 		o.datatype = 'ip4addr';
 		o.placeholder = '10.100.61.1';
 
-		o = s.option(form.Value, 'mac', _('Campus MAC address'));
+		o = s.option(form.Value, 'mac', _('MAC address'));
 		o.datatype = 'macaddr';
 		o.placeholder = 'aa:bb:cc:dd:ee:ff';
 
 		return m.render().then(function(mapEl) {
+			var reconnectBtn = E('button', {
+				'id': 'jlu-reconnect',
+				'class': 'cbi-button cbi-button-action',
+				'click': ui.createHandlerFn(this, 'handleReconnect')
+			}, [ _('Reconnect') ]);
+
 			var box = E('div', { 'class': 'cbi-section' }, [
 				E('h3', {}, [ _('Service status') ]),
 				E('div', { 'class': 'table' }, [
 					E('div', { 'class': 'tr' }, [
 						E('div', { 'class': 'td left' }, [ _('Connection state') ]),
-						E('div', { 'class': 'td left', 'id': 'drcom-status-state' },
-							[ state_label(initialStatus && initialStatus.state) ])
+						E('div', { 'class': 'td left', 'id': 'jlu-status-state' }, [ '-' ])
 					]),
 					E('div', { 'class': 'tr' }, [
 						E('div', { 'class': 'td left' }, [ _('Last error') ]),
-						E('div', { 'class': 'td left', 'id': 'drcom-status-err' },
-							[ err_label(initialStatus && initialStatus.last_error) ])
+						E('div', { 'class': 'td left', 'id': 'jlu-status-err' }, [ '-' ])
 					])
 				]),
 				E('div', { 'class': 'cbi-page-actions' }, [
@@ -320,16 +362,16 @@ return view.extend({
 						'click': ui.createHandlerFn(this, function(ev) { return this.handleRestore(m, ev); })
 					}, [ _('One-click restore') ]),
 					' ',
-					E('button', {
-						'class': 'cbi-button cbi-button-action',
-						'click': ui.createHandlerFn(this, 'handleReconnect')
-					}, [ _('Reconnect') ])
+					reconnectBtn
 				])
 			]);
 
-			poll.add(function() {
-				return callStatus().then(updateStatusBox).catch(function() {});
-			});
+			/* 先问一次状态再放开「重连」按钮：守护进程没在跑时按钮保持禁用，
+			 * 用户看到的是「服务未运行 + 原因」，而不是一串 RPC 报错。
+			 * （与 hustNetworkLogin 的写法保持一致。） */
+			reconnectBtn.disabled = true;
+			this.refresh_status();
+			poll.add(L.bind(this.refresh_status, this));
 
 			/*
 			 * 状态区必须放在 map 元素【外面】，所以这里返回一个容器把两者并排：

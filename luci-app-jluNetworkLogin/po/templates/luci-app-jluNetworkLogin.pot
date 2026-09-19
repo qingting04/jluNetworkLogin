@@ -12,22 +12,16 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "Campus IP address"
-msgstr ""
-
-msgid "Campus MAC address"
-msgstr ""
-
-msgid "Campus gateway"
-msgstr ""
-
-msgid "Campus interface"
+msgid "Cancel"
 msgstr ""
 
 msgid "Connection state"
 msgstr ""
 
-msgid "Enable automatic login"
+msgid "Continue"
+msgstr ""
+
+msgid "Enable"
 msgstr ""
 
 msgid "Failed to reload the network: %s"
@@ -42,16 +36,22 @@ msgstr ""
 msgid "Fill in these fields first: %s"
 msgstr ""
 
+msgid "Gateway"
+msgstr ""
+
+msgid "IP address"
+msgstr ""
+
 msgid "IP address is required"
 msgstr ""
 
 msgid "Idle"
 msgstr ""
 
-msgid "JLU Network Login"
+msgid "Interface"
 msgstr ""
 
-msgid "Keep as is"
+msgid "JLU Network Login"
 msgstr ""
 
 msgid "Keeping alive"
@@ -63,10 +63,7 @@ msgstr ""
 msgid "Logging in"
 msgstr ""
 
-msgid "Login account"
-msgstr ""
-
-msgid "Login password"
+msgid "MAC address"
 msgstr ""
 
 msgid "MAC address is required"
@@ -93,19 +90,19 @@ msgstr ""
 msgid "Online"
 msgstr ""
 
+msgid "Password"
+msgstr ""
+
 msgid "Password is required"
 msgstr ""
 
 msgid "Reconnect"
 msgstr ""
 
-msgid "Reconnect failed - the login service does not seem to be running. Enable it and apply the settings first."
+msgid "Reconnect failed: %s"
 msgstr ""
 
 msgid "Restore applied."
-msgstr ""
-
-msgid "Restore now"
 msgstr ""
 
 msgid "Restore the previous settings?"
@@ -114,7 +111,13 @@ msgstr ""
 msgid "Service is disabled"
 msgstr ""
 
+msgid "Service not running"
+msgstr ""
+
 msgid "Service status"
+msgstr ""
+
+msgid "The login service is authenticating again now. Check \"logread -e jlu-network-login\" for details."
 msgstr ""
 
 msgid "The service is disabled - enable it and apply the settings first."
@@ -123,5 +126,14 @@ msgstr ""
 msgid "This restores the interface settings that were backed up before the last one-click setup and re-enables DNS rebind protection."
 msgstr ""
 
+msgid "Username"
+msgstr ""
+
 msgid "Username is required"
+msgstr ""
+
+msgid "the login service is not running (no ubus object) - start it with \"/etc/init.d/jlu-network-login restart\""
+msgstr ""
+
+msgid "unknown error"
 msgstr ""
