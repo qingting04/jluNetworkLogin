@@ -255,6 +255,7 @@ return view.extend({
 
 	render: function(data) {
 		var initialStatus = data[1] || {};
+		var self = this;
 
 		var m = new form.Map('jlu-network-login', _('JLU Network Login'));
 
@@ -288,9 +289,13 @@ return view.extend({
 		o.datatype = 'macaddr';
 		o.placeholder = 'aa:bb:cc:dd:ee:ff';
 
-		return m.render().then(function(mapEl) {
-			/* 状态与操作按钮放在同一块里，插到页面标题之后、设置之前
-			 * （版式与 hustNetworkLogin 的页面保持一致） */
+		/* 状态区 + 操作按钮，插到页面标题之后、设置之前（版式与 hustNetworkLogin 一致）。
+		 *
+		 * 坑：LuCI 的 Map.save() 最后会调用 renderContents()，而 renderContents() 会
+		 * 先 dom.content(mapEl, null) 清空 mapEl 再重建整个表单 —— 任何直接插进 mapEl
+		 * 的节点都会在「保存并应用」/「一键配置」/「一键恢复」/「重置」后被清掉，要刷新
+		 * 页面才回来。这里包一层 renderContents，每次重渲染后把状态区重新插回去。 */
+		var buildStatusBox = function(mapEl) {
 			var box = E('div', { 'class': 'cbi-section' }, [
 				E('h3', {}, [ _('Service status') ]),
 				E('div', { 'class': 'table' }, [
@@ -308,10 +313,10 @@ return view.extend({
 				E('div', { 'class': 'cbi-page-actions' }, [
 					E('button', {
 						'class': 'cbi-button cbi-button-positive',
-						'click': ui.createHandlerFn(this, function(ev) {
+						'click': ui.createHandlerFn(self, function(ev) {
 							var btn = ev.currentTarget;
 							btn.disabled = true;
-							return this.handleOneClick(m, ev).catch(function() {}).then(function() {
+							return self.handleOneClick(m, ev).catch(function() {}).then(function() {
 								btn.disabled = false;
 							});
 						})
@@ -319,23 +324,41 @@ return view.extend({
 					' ',
 					E('button', {
 						'class': 'cbi-button cbi-button-negative',
-						'click': ui.createHandlerFn(this, function(ev) { return this.handleRestore(m, ev); })
+						'click': ui.createHandlerFn(self, function(ev) { return self.handleRestore(m, ev); })
 					}, [ _('One-click restore') ]),
 					' ',
 					E('button', {
 						'class': 'cbi-button cbi-button-action',
-						'click': ui.createHandlerFn(this, 'handleReconnect')
+						'click': ui.createHandlerFn(self, 'handleReconnect')
 					}, [ _('Reconnect') ])
 				])
 			]);
 
-			poll.add(function() {
-				return callStatus().then(updateStatusBox).catch(function() {});
+			var anchor = mapEl.querySelector('.cbi-section');
+
+			if (anchor)
+				mapEl.insertBefore(box, anchor);
+			else
+				mapEl.appendChild(box);
+
+			return box;
+		};
+
+		var renderContents = m.renderContents.bind(m);
+
+		m.renderContents = function() {
+			return renderContents().then(function(mapEl) {
+				buildStatusBox(mapEl);
+				callStatus().then(updateStatusBox).catch(function() {});
+
+				return mapEl;
 			});
+		};
 
-			mapEl.insertBefore(box, mapEl.querySelector('.cbi-section'));
+		poll.add(function() {
+			return callStatus().then(updateStatusBox).catch(function() {});
+		});
 
-			return mapEl;
-		}.bind(this));
+		return m.render();
 	}
 });
