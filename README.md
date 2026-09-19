@@ -103,7 +103,7 @@ make package/luci-app-jluNetworkLogin/compile V=s
 
 | 按钮 | 功能 |
 |------|------|
-| 一键配置 | 将所选接口改为静态地址，写入 IP / MAC / 网关 / DNS，关闭 DNS 重绑定保护；执行前自动备份（细节见下节） |
+| 一键配置 | 将所选接口改为静态地址，写入 IP / MAC / 网关 / DNS，关闭 DNS 重绑定保护；执行前自动备份。**接口 / IP / 网关 / MAC 未填齐时按钮置灰、点击无效**（细节见下节） |
 | 一键恢复 | 恢复上次「一键配置」前的接口设置，重新启用 DNS 重绑定保护 |
 | 重连 | 断开当前连接并重新发起 challenge → login 流程 |
 
@@ -143,6 +143,8 @@ config main 'main'
 | `gateway` | 一键配置时 | — | 网关（仅「一键配置」需要） |
 
 > **密码长度**：登录包对密码做混淆时使用 16 字节的密钥，超过 16 位的密码会按 16 位循环使用密钥。建议使用不超过 16 位的密码；如遇登录失败，请先缩短密码再试。
+
+> **必填项由守护进程提示**：界面不再做必填拦截（留空也能保存）。缺少哪项由守护进程写进「最近错误」：`Username is required` / `Password is required` / `IP address is required` / `MAC address is required`（中文界面显示为「未填写 …」）。
 
 命令行等价：
 
@@ -224,8 +226,7 @@ fork 后按自己路由器改 workflow 顶部 4 个变量（`TARGET` / `SUBTARGE
 
 | 现象 | 原因 / 处理 |
 |------|-------------|
-| 状态「空闲」，日志提示 `ip required` | 未填写 `ip` 选项 |
-| 日志提示 `mac required` | 未填写 `mac` 选项 |
+| 「最近错误」提示 `... is required` | 对应项未填写（`username` / `password` / `ip` / `mac`），补齐后点「保存并应用」即可 |
 | `login failed: wrong credentials` | 账号或密码错误，或密码过长 |
 | `kicked: other device logged in` | 该账号已在其它设备登录 |
 | 安装后始终无法在线 | 确认接口为接入校园网的接口，且 IP / MAC 与校园网分配的静态信息一致 |

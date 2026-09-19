@@ -434,6 +434,16 @@ static void start_challenge(struct drcom_ctx *c) {
 		return;
 	}
 
+	if (!c->username[0]) {
+		set_err(c, "username required");
+		return;
+	}
+
+	if (!c->password[0]) {
+		set_err(c, "password required");
+		return;
+	}
+
 	if (!c->bind_ip_ok) {
 		set_err(c, "ip required");
 		return;

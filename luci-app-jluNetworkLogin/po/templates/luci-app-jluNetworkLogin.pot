@@ -12,9 +12,6 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "An interface must be selected"
-msgstr ""
-
 msgid "Cancel"
 msgstr ""
 
@@ -42,6 +39,9 @@ msgstr ""
 msgid "IP address"
 msgstr ""
 
+msgid "IP address is required"
+msgstr ""
+
 msgid "Idle"
 msgstr ""
 
@@ -61,6 +61,9 @@ msgid "Logging in"
 msgstr ""
 
 msgid "MAC address"
+msgstr ""
+
+msgid "MAC address is required"
 msgstr ""
 
 msgid "Manual reconnect"
@@ -87,6 +90,9 @@ msgstr ""
 msgid "Password"
 msgstr ""
 
+msgid "Password is required"
+msgstr ""
+
 msgid "Reconnect"
 msgstr ""
 
@@ -99,16 +105,10 @@ msgstr ""
 msgid "Restore the previous settings?"
 msgstr ""
 
+msgid "Service is disabled"
+msgstr ""
+
 msgid "Service status"
-msgstr ""
-
-msgid "The IP address is required"
-msgstr ""
-
-msgid "The MAC address is required"
-msgstr ""
-
-msgid "The gateway is required"
 msgstr ""
 
 msgid "This restores the interface settings that were backed up before the last one-click setup and re-enables DNS rebind protection."
@@ -117,3 +117,5 @@ msgstr ""
 msgid "Username"
 msgstr ""
 
+msgid "Username is required"
+msgstr ""
