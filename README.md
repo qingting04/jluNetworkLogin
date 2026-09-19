@@ -103,9 +103,9 @@ make package/luci-app-jluNetworkLogin/compile V=s
 
 | 按钮 | 功能 |
 |------|------|
-| 一键配置 | 将所选接口改为静态地址，写入 IP / MAC / 网关 / DNS，关闭 DNS 重绑定保护；执行前自动备份。**接口 / IP / 网关 / MAC 未填齐时点击不做任何配置**（细节见下节） |
+| 一键配置 | 将所选接口改为静态地址，写入 IP / MAC / 网关 / DNS，关闭 DNS 重绑定保护；执行前自动备份。**接口 / IP / 网关 / MAC 未填齐时会弹出提示、不做任何配置改动**（细节见下节） |
 | 一键恢复 | 恢复上次「一键配置」前的接口设置，重新启用 DNS 重绑定保护 |
-| 重连 | 断开当前连接并重新发起 challenge → login 流程 |
+| 重连 | 断开当前连接并重新发起 challenge → login 流程；服务未启用 / 未运行时给出提示（不再直接抛 RPC 错误） |
 
 **③ 设置**：启用开关、账号、密码、网络接口（下拉）、IP 地址、网关、MAC 地址（改完点页面底部「保存并应用」；IP / 网关 / MAC 框内灰字仅为**占位示例**，不是默认值，需要自己填）
 
@@ -229,6 +229,7 @@ fork 后按自己路由器改 workflow 顶部 4 个变量（`TARGET` / `SUBTARGE
 | 「最近错误」提示 `... is required` | 对应项未填写（`username` / `password` / `ip` / `mac`），补齐后点「保存并应用」即可 |
 | `login failed: wrong credentials` | 账号或密码错误，或密码过长 |
 | `kicked: other device logged in` | 该账号已在其它设备登录 |
+| 点「重连」报 `Object not found` 之类 RPC 错误 | 服务未启用或未运行：勾选「启用」→「保存并应用」，再点「重连」 |
 | 安装后始终无法在线 | 确认接口为接入校园网的接口，且 IP / MAC 与校园网分配的静态信息一致 |
 
 ## 说明
@@ -236,6 +237,7 @@ fork 后按自己路由器改 workflow 顶部 4 个变量（`TARGET` / `SUBTARGE
 - **包名/显示名是小驼峰 `jluNetworkLogin`**；但 UCI config 名、init.d 脚本名、ubus 对象名、守护进程的 syslog 标识保持 kebab-case `jlu-network-login`（OpenWrt 系统机制约定）。
 - **中英双语界面**：LuCI 文案用英文 msgid，中文由 `luci-i18n-jluNetworkLogin-zh-cn` 翻译包提供，不装则是英文。
 - **LuCI 版本**：JS 框架需 LuCI 23.05+，ImmortalWrt 23.05 / 24.10 / 25.x 均支持。
+- **守护进程只在 `enabled=1` 时才由 init 脚本启动**；未启用时 ubus 对象不存在，页面状态区为空、点「重连」会提示先启用（而不是抛 RPC 错误）。
 
 ## 免责声明
 

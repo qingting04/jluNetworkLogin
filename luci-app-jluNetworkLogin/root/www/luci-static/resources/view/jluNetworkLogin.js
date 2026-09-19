@@ -78,9 +78,24 @@ return view.extend({
 			var mac = uci.get('jlu-network-login', 'main', 'mac');
 			var gw = uci.get('jlu-network-login', 'main', 'gateway');
 
-			/* 缺项时什么都不做：不写任何配置、不弹提示 */
-			if (!ifname || !ip || !mac || !gw)
+			/* 缺项：不写任何配置，只提示缺了哪几项 */
+			if (!ifname || !ip || !mac || !gw) {
+				var missing = [];
+
+				if (!ifname)
+					missing.push(_('Interface'));
+				if (!ip)
+					missing.push(_('IP address'));
+				if (!mac)
+					missing.push(_('MAC address'));
+				if (!gw)
+					missing.push(_('Gateway'));
+
+				ui.addNotification(_('One-click setup'),
+					E('p', [ _('Fill in these fields first: %s').format(missing.join(' / ')) ]), 'warning');
+
 				return;
+			}
 
 			mac = String(mac).toLowerCase();
 
@@ -207,6 +222,30 @@ return view.extend({
 		});
 	},
 
+	handleReconnect: function(ev) {
+		var btn = ev.currentTarget;
+
+		/* 守护进程只在 enabled=1 时才由 init 脚本拉起，未启用时 ubus 对象不存在，
+		 * 直接调用会报 "Object not found"，这里先拦一层给出可读提示。 */
+		if (uci.get('jlu-network-login', 'main', 'enabled') != '1') {
+			ui.addNotification(_('Reconnect'),
+				E('p', [ _('The service is disabled - enable it and apply the settings first.') ]), 'warning');
+
+			return Promise.resolve();
+		}
+
+		btn.disabled = true;
+
+		return callReconnect().catch(function(e) {
+			ui.addNotification(_('Reconnect'),
+				E('p', [ _('Reconnect failed - the login service does not seem to be running. Enable it and apply the settings first.') ]), 'warning');
+
+			console.error('jlu-network-login: reconnect failed:', e);
+		}).then(function() {
+			btn.disabled = false;
+		});
+	},
+
 	load: function() {
 		return Promise.all([
 			uci.load('jlu-network-login'),
@@ -285,15 +324,7 @@ return view.extend({
 					' ',
 					E('button', {
 						'class': 'cbi-button cbi-button-action',
-						'click': ui.createHandlerFn(this, function(ev) {
-							var btn = ev.currentTarget;
-							btn.disabled = true;
-							return callReconnect().catch(function(e) {
-								ui.addNotification(null, E('p', [ _('Reconnect failed: %s').format(String(e)) ]), 'warning');
-							}).then(function() {
-								btn.disabled = false;
-							});
-						})
+						'click': ui.createHandlerFn(this, 'handleReconnect')
 					}, [ _('Reconnect') ])
 				])
 			]);

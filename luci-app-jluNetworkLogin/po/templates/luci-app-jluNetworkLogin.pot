@@ -33,6 +33,9 @@ msgstr ""
 msgid "Fetching challenge"
 msgstr ""
 
+msgid "Fill in these fields first: %s"
+msgstr ""
+
 msgid "Gateway"
 msgstr ""
 
@@ -96,7 +99,7 @@ msgstr ""
 msgid "Reconnect"
 msgstr ""
 
-msgid "Reconnect failed: %s"
+msgid "Reconnect failed - the login service does not seem to be running. Enable it and apply the settings first."
 msgstr ""
 
 msgid "Restore applied."
@@ -109,6 +112,9 @@ msgid "Service is disabled"
 msgstr ""
 
 msgid "Service status"
+msgstr ""
+
+msgid "The service is disabled - enable it and apply the settings first."
 msgstr ""
 
 msgid "This restores the interface settings that were backed up before the last one-click setup and re-enables DNS rebind protection."
