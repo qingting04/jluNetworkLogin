@@ -269,10 +269,14 @@ static ssize_t build_login_packet(struct drcom_ctx *c, uint8_t *out, size_t out_
 	memcpy(out + 110, c->hostname, strnlen(c->hostname, 32));
 
 	/* dns + dhcp */
-	in_addr_t dns_ip = inet_addr(c->dns[0] ? c->dns : "10.10.10.10");
-	memcpy(out + 142, &dns_ip, 4);
-	in_addr_t dhcp_ip = inet_addr("0.0.0.0");
-	memcpy(out + 146, &dhcp_ip, 4);
+	struct in_addr dns_ip;
+
+	if (inet_pton(AF_INET, c->dns[0] ? c->dns : "10.10.10.10", &dns_ip) != 1)
+		dns_ip.s_addr = 0;
+	memcpy(out + 142, &dns_ip.s_addr, 4);
+
+	struct in_addr dhcp_ip = { .s_addr = 0 };
+	memcpy(out + 146, &dhcp_ip.s_addr, 4);
 
 	/* os / unknown block */
 	static const uint8_t osblk[20] = {
@@ -375,6 +379,16 @@ static void schedule_retry(struct drcom_ctx *c) {
 	uloop_timeout_set(&c->retry_tmo, ms);
 }
 
+/* 统一的发包收尾：记发送时间、切换阶段、武装响应超时。
+ * 原来「send + last_tx + phase + uloop_timeout_set」这段在 5 处各抄了一遍。 */
+static void drcom_send(struct drcom_ctx *c, const void *pkt, size_t len,
+		       drcom_phase_t phase, int timeout_ms) {
+	send(c->sock, pkt, len, 0);
+	c->last_tx = time(NULL);
+	c->phase = phase;
+	uloop_timeout_set(&c->tmo, timeout_ms);
+}
+
 static void timeout_cb(struct uloop_timeout *t) {
 	struct drcom_ctx *c = container_of(t, struct drcom_ctx, tmo);
 	switch (c->phase) {
@@ -398,10 +412,7 @@ static void keepalive_cycle_cb(struct uloop_timeout *t) {
 	c->rand16 = (uint16_t)(rand() & 0xffff);
 	uint8_t pkt[38];
 	build_keepalive0(c, pkt);
-	send(c->sock, pkt, sizeof(pkt), 0);
-	c->last_tx = time(NULL);
-	c->phase = PHASE_KEEPALIVE;
-	uloop_timeout_set(&c->tmo, KEEPALIVE_TIMEOUT_MS);
+	drcom_send(c, pkt, sizeof(pkt), PHASE_KEEPALIVE, KEEPALIVE_TIMEOUT_MS);
 }
 
 static void start_keepalive(struct drcom_ctx *c) {
@@ -417,10 +428,7 @@ static void start_login(struct drcom_ctx *c) {
 		go_offline(c, "invalid login config");
 		return;
 	}
-	send(c->sock, pkt, (size_t)len, 0);
-	c->last_tx = time(NULL);
-	c->phase = PHASE_LOGIN;
-	uloop_timeout_set(&c->tmo, LOGIN_TIMEOUT_MS);
+	drcom_send(c, pkt, (size_t)len, PHASE_LOGIN, LOGIN_TIMEOUT_MS);
 }
 
 static void sock_cb(struct uloop_fd *u, unsigned int events);
@@ -477,10 +485,7 @@ static void start_challenge(struct drcom_ctx *c) {
 	pkt[2] = (uint8_t)(rand() & 0xff);
 	pkt[3] = (uint8_t)(rand() & 0xff);
 	pkt[4] = 0x68;
-	send(c->sock, pkt, sizeof(pkt), 0);
-	c->last_tx = time(NULL);
-	c->phase = PHASE_CHALLENGE;
-	uloop_timeout_set(&c->tmo, CHALLENGE_TIMEOUT_MS);
+	drcom_send(c, pkt, sizeof(pkt), PHASE_CHALLENGE, CHALLENGE_TIMEOUT_MS);
 }
 
 static void sock_cb(struct uloop_fd *u, unsigned int events) {
@@ -535,20 +540,13 @@ static void sock_cb(struct uloop_fd *u, unsigned int events) {
 				if (c->keepalive_stage > 0 && r >= 20)
 					memcpy(c->flux, c->rxbuf + 16, 4);
 
-				if (c->keepalive_stage == 0) {
-					c->keepalive_stage = 1;
+				/* 两个 stage 只差 build_keepalive12 的 type（= 新的 stage 值），合并成一段 */
+				if (c->keepalive_stage < 2) {
 					uint8_t pkt[40];
-					build_keepalive12(c, 1, pkt);
-					send(c->sock, pkt, sizeof(pkt), 0);
-					c->last_tx = time(NULL);
-					uloop_timeout_set(&c->tmo, KEEPALIVE_TIMEOUT_MS);
-				} else if (c->keepalive_stage == 1) {
-					c->keepalive_stage = 2;
-					uint8_t pkt[40];
-					build_keepalive12(c, 2, pkt);
-					send(c->sock, pkt, sizeof(pkt), 0);
-					c->last_tx = time(NULL);
-					uloop_timeout_set(&c->tmo, KEEPALIVE_TIMEOUT_MS);
+
+					c->keepalive_stage++;
+					build_keepalive12(c, c->keepalive_stage, pkt);
+					drcom_send(c, pkt, sizeof(pkt), PHASE_KEEPALIVE, KEEPALIVE_TIMEOUT_MS);
 				} else {
 					c->keepalive_stage = 0;
 					c->phase = PHASE_IDLE;
@@ -570,6 +568,15 @@ enum {
 static const struct blobmsg_policy reload_policy[__RELOAD_MAX] = {
 	[RELOAD_FORCE] = { .name = "force", .type = BLOBMSG_TYPE_BOOL },
 };
+
+/* 取一个字符串选项；空值或缺失时用 def。等价于原来的
+ * uci_lookup_option_string() + snprintf(out, sz, "%s", v ? v : def) 组合。 */
+static void uci_get_str(struct uci_context *uc, struct uci_section *s, const char *name,
+			char *out, size_t out_sz, const char *def) {
+	const char *v = uci_lookup_option_string(uc, s, name);
+
+	snprintf(out, out_sz, "%s", (v && *v) ? v : (def ? def : ""));
+}
 
 static int load_uci_config(struct drcom_ctx *c) {
 	struct uci_context *uc = uci_alloc_context();
@@ -596,21 +603,16 @@ static int load_uci_config(struct drcom_ctx *c) {
 
 	snprintf(c->server, sizeof(c->server), "%s", DRCOM_DEFAULT_SERVER);
 
-	v = uci_lookup_option_string(uc, s, "username");
-	snprintf(c->username, sizeof(c->username), "%s", v ? v : "");
-
-	v = uci_lookup_option_string(uc, s, "password");
-	snprintf(c->password, sizeof(c->password), "%s", v ? v : "");
-
-	v = uci_lookup_option_string(uc, s, "interface");
-	snprintf(c->interface, sizeof(c->interface), "%s", (v && *v) ? v : "wan");
+	uci_get_str(uc, s, "username", c->username, sizeof(c->username), "");
+	uci_get_str(uc, s, "password", c->password, sizeof(c->password), "");
+	uci_get_str(uc, s, "interface", c->interface, sizeof(c->interface), "wan");
 
 	c->bind_ip_ok = false;
 	c->bind_ip = INADDR_ANY;
 	v = uci_lookup_option_string(uc, s, "ip");
 	if (v && *v) {
 		struct in_addr a;
-		if (inet_aton(v, &a) != 0) {
+		if (inet_pton(AF_INET, v, &a) == 1) {
 			c->bind_ip = a.s_addr;
 			c->bind_ip_ok = true;
 		} else {
