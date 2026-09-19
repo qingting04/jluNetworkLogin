@@ -621,7 +621,7 @@ static int load_uci_config(struct drcom_ctx *c) {
 	}
 
 	{
-		char hn[64] = {0};
+		char hn[sizeof(c->hostname)] = {0};
 		if (gethostname(hn, sizeof(hn) - 1) == 0)
 			snprintf(c->hostname, sizeof(c->hostname), "%s", hn);
 		else
