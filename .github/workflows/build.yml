@@ -3,7 +3,12 @@ name: build
 on:
   push:
     branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 env:
   SDK_VERSION: "25.12.2"
@@ -20,6 +25,9 @@ jobs:
 
       - name: Sanity checks（出厂默认值一致性 / 翻译覆盖 / JS 语法）
         run: python3 luci-app-jluNetworkLogin/test/check.py
+
+      - name: DrCOM packet regression tests
+        run: sh jluNetworkLogin/test/run-packet-tests.sh
 
       - name: Install zstd
         run: sudo apt-get update && sudo apt-get install -y zstd
@@ -48,9 +56,22 @@ jobs:
           make package/jluNetworkLogin/compile V=s -j$(nproc)
           make package/luci-app-jluNetworkLogin/compile V=s -j$(nproc)
 
+      - name: Verify all three APKs were built
+        shell: bash
+        run: |
+          shopt -s globstar nullglob
+          for package in jluNetworkLogin luci-app-jluNetworkLogin luci-i18n-jluNetworkLogin-zh-cn; do
+            files=(immortalwrt-sdk-*/bin/packages/**/"$package"*.apk)
+            if (( ${#files[@]} == 0 )); then
+              printf '::error::No APK built for %s\n' "$package"
+              exit 1
+            fi
+          done
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
+          if-no-files-found: error
           name: jluNetworkLogin
           path: |
             immortalwrt-sdk-*/bin/packages/**/jluNetworkLogin*.apk

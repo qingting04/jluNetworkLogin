@@ -16,12 +16,13 @@
 #include <net/if.h>
 
 #include <libubox/blobmsg.h>
-#include <libubox/md5.h>
 #include <libubox/ulog.h>
 #include <libubox/uloop.h>
 #include <libubox/utils.h>
 #include <libubus.h>
 #include <uci.h>
+
+#include "drcom-packet.h"
 
 #define DRCOM_DEFAULT_PORT 61440
 #define DRCOM_DEFAULT_SERVER "10.100.61.3"
@@ -174,178 +175,6 @@ static int open_socket(struct drcom_ctx *c) {
 	return fd;
 }
 
-static void checksum2(const uint8_t *buf, size_t len, uint8_t out[4]) {
-	uint32_t sum = 1234;
-	uint8_t tmp[4];
-	for (size_t i = 0; i < len; i += 4) {
-		memset(tmp, 0, sizeof(tmp));
-		size_t n = (len - i >= 4) ? 4 : (len - i);
-		memcpy(tmp, buf + i, n);
-		uint32_t v = (uint32_t)tmp[0] | ((uint32_t)tmp[1] << 8) | ((uint32_t)tmp[2] << 16) | ((uint32_t)tmp[3] << 24);
-		sum ^= v;
-	}
-	uint32_t r = 1968U * sum;
-	out[0] = (uint8_t)r;
-	out[1] = (uint8_t)(r >> 8);
-	out[2] = (uint8_t)(r >> 16);
-	out[3] = (uint8_t)(r >> 24);
-}
-
-static void rol3(const uint8_t md5a[16], const uint8_t *pass, size_t pass_len, uint8_t *out) {
-	/* md5a is 16 bytes; for passwords longer than 16 the key cycles (i & 15),
-	 * avoiding an out-of-bounds read into the adjacent struct fields. */
-	for (size_t i = 0; i < pass_len; i++) {
-		uint8_t x = (uint8_t)(md5a[i & 15] ^ pass[i]);
-		out[i] = (uint8_t)(((x << 3) & 0xff) | (x >> 5));
-	}
-}
-
-static void md5sum_bytes(const void *data, size_t len, uint8_t out[16]) {
-	md5_ctx_t ctx;
-	md5_begin(&ctx);
-	md5_hash(data, len, &ctx);
-	md5_end(out, &ctx);
-}
-
-static ssize_t build_login_packet(struct drcom_ctx *c, uint8_t *out, size_t out_sz) {
-	const uint8_t control_check = 0x20;
-	const uint8_t adapter_num = 0x03;
-	const uint8_t ip_dog = 0x01;
-	const uint8_t auth_ver[2] = { 0x68, 0x00 };
-
-	size_t user_len = strnlen(c->username, 36);
-	size_t pass_len = strnlen(c->password, 32);
-	if (user_len == 0 || pass_len == 0)
-		return -1;
-
-	size_t pkt_len = 333 + pass_len;
-	if (pkt_len > out_sz)
-		return -1;
-	memset(out, 0, pkt_len);
-
-	uint8_t md5tmp[16];
-
-	/* md5tmp = md5(0x01 + pass + salt + 0x00*4) */
-	uint8_t tmpbuf[1 + 32 + 4 + 4];
-	memset(tmpbuf, 0, sizeof(tmpbuf));
-	tmpbuf[0] = 0x01;
-	memcpy(tmpbuf + 1, c->password, pass_len);
-	memcpy(tmpbuf + 1 + pass_len, c->salt, 4);
-	md5sum_bytes(tmpbuf, 1 + pass_len + 4 + 4, md5tmp);
-
-	/* md5a = md5(0x03 0x01 salt pass) */
-	uint8_t tmp2[2 + 4 + 32];
-	tmp2[0] = 0x03;
-	tmp2[1] = 0x01;
-	memcpy(tmp2 + 2, c->salt, 4);
-	memcpy(tmp2 + 6, c->password, pass_len);
-	md5sum_bytes(tmp2, 6 + pass_len, c->md5a);
-
-	out[0] = 0x03;
-	out[1] = 0x01;
-	out[2] = 0x00;
-	out[3] = (uint8_t)(user_len + 20);
-	memcpy(out + 4, c->md5a, 16);
-	memcpy(out + 20, c->username, user_len);
-
-	out[56] = control_check;
-	out[57] = adapter_num;
-	for (int i = 0; i < 6; i++)
-		out[58 + i] = (uint8_t)(c->md5a[i] ^ c->mac[i]);
-
-	memcpy(out + 64, md5tmp, 16);
-
-	out[80] = 0x01;
-	memcpy(out + 81, &c->local_ip, 4);
-
-	/* md5 checksum field at [97..104] */
-	memcpy(out + 97, "\x14\x00\x07\x0b", 4);
-	md5sum_bytes(out, 101, md5tmp);
-	memcpy(out + 97, md5tmp, 8);
-
-	out[105] = ip_dog;
-
-	/* hostname */
-	memcpy(out + 110, c->hostname, strnlen(c->hostname, 32));
-
-	/* dns + dhcp */
-	struct in_addr dns_ip;
-
-	if (inet_pton(AF_INET, c->dns[0] ? c->dns : "10.10.10.10", &dns_ip) != 1)
-		dns_ip.s_addr = 0;
-	memcpy(out + 142, &dns_ip.s_addr, 4);
-
-	struct in_addr dhcp_ip = { .s_addr = 0 };
-	memcpy(out + 146, &dhcp_ip.s_addr, 4);
-
-	/* os / unknown block */
-	static const uint8_t osblk[20] = {
-		0x94, 0x00, 0x00, 0x00,
-		0x06, 0x00, 0x00, 0x00,
-		0x02, 0x00, 0x00, 0x00,
-		0xf0, 0x23, 0x00, 0x00,
-		0x02, 0x00, 0x00, 0x00,
-	};
-	memcpy(out + 162, osblk, sizeof(osblk));
-
-	/* DRCOM check + padding */
-	static const uint8_t drcomchk[64] = {
-		0x44, 0x72, 0x43, 0x4f, 0x4d, 0x00, 0xcf, 0x07, 0x68,
-		/* rest zeros */
-	};
-	memcpy(out + 182, drcomchk, sizeof(drcomchk));
-
-	/* key3 */
-	memcpy(out + 246, "3dc79f5212e8170acfa9ec95f1d74916542be7b1", 40);
-
-	/* auth version + pass len */
-	memcpy(out + 310, auth_ver, 2);
-	out[313] = (uint8_t)pass_len;
-
-	rol3(c->md5a, (const uint8_t *)c->password, pass_len, out + 314);
-	out[314 + pass_len] = 0x02;
-	out[315 + pass_len] = 0x0c;
-
-	/* checksum2 placement */
-	memcpy(out + 316 + pass_len, "\x01\x26\x07\x11\x00\x00", 6);
-	memcpy(out + 322 + pass_len, c->mac, 6);
-	checksum2(out, 328 + pass_len, out + 316 + pass_len);
-	memset(out + 320 + pass_len, 0x00, 2);
-	memcpy(out + 322 + pass_len, c->mac, 6);
-
-	/* tail */
-	memcpy(out + 331 + pass_len, "\x6e\xe2", 2);
-
-	return (ssize_t)pkt_len;
-}
-
-static void build_keepalive0(struct drcom_ctx *c, uint8_t out[38]) {
-	memset(out, 0, 38);
-	out[0] = 0xff;
-	memcpy(out + 1, c->md5a, 16);
-	/* [17..19] zeros */
-	memcpy(out + 20, c->tail, 16);
-	out[36] = (uint8_t)(c->rand16 >> 8);
-	out[37] = (uint8_t)(c->rand16);
-}
-
-static void build_keepalive12(struct drcom_ctx *c, int type, uint8_t out[40]) {
-	const uint8_t keepalive_ver[2] = { 0xdc, 0x02 };
-	memset(out, 0, 40);
-	out[0] = 0x07;
-	out[1] = (uint8_t)(c->alivesum++ % 32);
-	out[2] = 0x28;
-	out[3] = 0x00;
-	out[4] = 0x0b;
-	out[5] = (uint8_t)(2 * type - 1); /* 1 or 3 */
-	memcpy(out + 6, keepalive_ver, 2);
-	out[9] = (uint8_t)(c->rand16 >> 8);
-	out[10] = (uint8_t)(c->rand16);
-	memcpy(out + 16, c->flux, 4);
-	if (type == 2)
-		memcpy(out + 28, &c->local_ip, 4);
-}
-
 static void schedule_retry(struct drcom_ctx *c);
 
 static void stop_io(struct drcom_ctx *c) {
@@ -410,8 +239,8 @@ static void keepalive_cycle_cb(struct uloop_timeout *t) {
 	struct drcom_ctx *c = container_of(t, struct drcom_ctx, keepalive_tmo);
 	c->keepalive_stage = 0;
 	c->rand16 = (uint16_t)(rand() & 0xffff);
-	uint8_t pkt[38];
-	build_keepalive0(c, pkt);
+	uint8_t pkt[DRCOM_KEEPALIVE0_LEN];
+	drcom_build_keepalive0(c->md5a, c->tail, c->rand16, pkt);
 	drcom_send(c, pkt, sizeof(pkt), PHASE_KEEPALIVE, KEEPALIVE_TIMEOUT_MS);
 }
 
@@ -423,7 +252,16 @@ static void start_keepalive(struct drcom_ctx *c) {
 
 static void start_login(struct drcom_ctx *c) {
 	uint8_t pkt[512];
-	ssize_t len = build_login_packet(c, pkt, sizeof(pkt));
+	struct drcom_login_fields fields = {
+		.username = c->username,
+		.password = c->password,
+		.hostname = c->hostname,
+		.dns = c->dns,
+		.local_ip = c->local_ip,
+	};
+	memcpy(fields.mac, c->mac, sizeof(fields.mac));
+	memcpy(fields.salt, c->salt, sizeof(fields.salt));
+	ssize_t len = drcom_build_login(&fields, pkt, sizeof(pkt), c->md5a);
 	if (len < 0) {
 		go_offline(c, "invalid login config");
 		return;
@@ -542,10 +380,11 @@ static void sock_cb(struct uloop_fd *u, unsigned int events) {
 
 				/* 两个 stage 只差 build_keepalive12 的 type（= 新的 stage 值），合并成一段 */
 				if (c->keepalive_stage < 2) {
-					uint8_t pkt[40];
+					uint8_t pkt[DRCOM_KEEPALIVE12_LEN];
 
 					c->keepalive_stage++;
-					build_keepalive12(c, c->keepalive_stage, pkt);
+					drcom_build_keepalive12(c->keepalive_stage, c->alivesum++,
+						c->rand16, c->flux, c->local_ip, pkt);
 					drcom_send(c, pkt, sizeof(pkt), PHASE_KEEPALIVE, KEEPALIVE_TIMEOUT_MS);
 				} else {
 					c->keepalive_stage = 0;
