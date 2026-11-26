@@ -28,7 +28,7 @@ define Build/Compile
 	$(TARGET_CC) $(TARGET_CFLAGS) $(TARGET_CPPFLAGS) -std=c11 -D_GNU_SOURCE \
 		-I$(STAGING_DIR)/usr/include \
 		-o $(PKG_BUILD_DIR)/jlu-network-login \
-		$(PKG_BUILD_DIR)/drcomd.c \
+		$(PKG_BUILD_DIR)/drcomd.c $(PKG_BUILD_DIR)/drcom-packet.c \
 		$(TARGET_LDFLAGS) -L$(STAGING_DIR)/usr/lib -lubus -lubox -luci
 endef
 

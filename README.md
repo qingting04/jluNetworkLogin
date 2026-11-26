@@ -12,7 +12,7 @@ DrCOM（Dr.COM）是深澜软件出品的高校校园网认证系统，吉林大
 
 ## 特性
 
-- **轻量高效**：纯 C（C11，单文件 `drcomd.c`），仅链接 OpenWrt 自带的 `libubus` / `libubox` / `libuci`
+- **轻量高效**：纯 C（C11），仅链接 OpenWrt 自带的 `libubus` / `libubox` / `libuci`
 - **procd 托管**：由 OpenWrt 原生进程管理器管理，断线自动 respawn，UCI 变更自动 reload
 - **ubus RPC 接口**：暴露 `status` / `reconnect` / `reload` 三个方法，可被脚本或其它服务调用
 - **系统日志**：经 ulog 写入 logd，`logread` 即可查看
@@ -191,7 +191,9 @@ challenge  →  login  →  keepalive (stage 0 → 1 → 2 → 循环)
 .
 ├── jluNetworkLogin/                   # C 软件包（守护进程）
 │   ├── Makefile                       #   标准 C 包，$(TARGET_CC) 交叉编译
-│   ├── src/drcomd.c                   #   单文件实现（challenge / login / keepalive + ubus）
+│   ├── src/drcomd.c                   #   守护进程：UDP、认证状态机、UCI、ubus
+│   ├── src/drcom-packet.{c,h}         #   登录与保活报文编码
+│   ├── test/                          #   固定报文的字节级回归测试（CI 执行）
 │   └── files/
 │       ├── jlu-network-login.init                # procd 服务脚本
 │       └── jlu-network-login.config              # UCI 默认配置
